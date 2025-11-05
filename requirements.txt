@@ -1,2 +1,2 @@
-pybag
 pygame
+pygbag
