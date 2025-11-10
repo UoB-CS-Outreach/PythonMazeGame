@@ -30,7 +30,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build web bundle
-        run: python -m pygbag --build .
+        run: python -m pygbag --build --template web/template.tmpl .
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

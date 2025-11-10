@@ -1,0 +1,10 @@
+/* Example: keep the canvas at native size; center it */
+html, body { margin: 0; background: #1b1d24; }
+canvas {
+  display: block;
+  margin: 12px auto;
+  width: 1160px !important;   /* match your WIN_W */
+  height: 508px !important;   /* match your WIN_H */
+  max-width: 100vw; max-height: 100vh;
+  image-rendering: pixelated; /* optional crisp scaling */
+}
