@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Game (Pyodide, Python API)</title>
+
+  <!--
+    We keep the visual styling separate in style.css.
+    This file only defines the structure of the page.
+  -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <h1>Maze Game</h1>
+
+  <!--
+    Top row: the maze canvas and the control buttons.
+    The canvas is where the maze and player are drawn
+    by JavaScript.
+  -->
+  <div id="top-row">
+    <canvas id="mazeCanvas" width="480" height="480"></canvas>
+
+    <div id="buttons">
+      <!-- Button to run whatever Python code is in the text area -->
+      <button id="runBtn">Run program</button>
+
+      <!-- Button to reset the maze and player position -->
+      <button id="resetBtn">Reset position</button>
+
+      <!-- Button to restore a sample program in the text area -->
+      <button id="sampleBtn">Load sample</button>
+
+      <!-- Slider to control animation speed of the player -->
+      <label id="speedLabel">
+        Speed:
+        <input type="range" id="speed" min="20" max="300" value="80">
+      </label>
+    </div>
+  </div>
+
+  <!--
+    Bottom row: left side is a text area where the user writes Python.
+    Right side is a text area that shows printed output and errors.
+  -->
+  <div id="bottom-row">
+    <div>
+      <p class="panel-title">Program (Python via Pyodide)</p>
+      <textarea id="code" spellcheck="false"></textarea>
+      <p class="hint">
+        Full Python (variables, functions, etc.).<br>
+        Maze API (in Python): <code>move()</code>, <code>turn_left()</code>,
+        <code>turn_right()</code>, <code>path_ahead()</code>,
+        <code>path_left()</code>, <code>path_right()</code>,
+        <code>at_goal()</code>, plus helpers in <code>maze_api.py</code>.
+      </p>
+    </div>
+
+    <div>
+      <p class="panel-title">Output</p>
+      <!-- Read only so the user cannot type into it by mistake -->
+      <textarea id="output" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<!--
+  Pyodide is a Python interpreter compiled to WebAssembly.
+  This script loads Pyodide and provides a global loadPyodide() function.
+-->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+
+<!--
+  maze.js contains:
+    * the maze layout
+    * code to draw and animate the player
+    * code to create a Pyodide instance
+    * code to run the user's Python program
+-->
+<script type="module" src="maze.js"></script>
+</body>
+</html>
