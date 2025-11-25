@@ -1,23 +1,3 @@
-// maze.js
-"use strict";
-
-/*
-  This file handles all JavaScript side work:
-
-    * defines the maze layout
-    * draws the maze and player on the canvas
-    * keeps a queue of actions created by Python
-    * animates those actions
-    * sets up Pyodide and runs the user's Python program
-
-  All "game logic" (move(), turn_left(), etc.) lives in maze_api.py,
-  which calls back into two small JS helpers:
-    - js_is_wall(r, c)
-    - js_enqueue_action(type)
-*/
-
-/* -------------- Maze definition -------------- */
-
 /*
   Maze legend:
     # = wall
@@ -25,53 +5,60 @@
     S = start position
     G = goal position
 */
-const maze = [
-  "############",
-  "#S         #",
-  "#   ####   #",
-  "#   #      #",
-  "#   #   #  #",
-  "#   ### #  #",
-  "#       #  #",
-  "#   #   #  #",
-  "#   #   #G #",
-  "############"
-];
-
-const rows = maze.length;
-const cols = maze[0].length;
-
+let maze = [];
+let numRows = 0, numCols = 0;
 let startRow = 0, startCol = 0;
 let goalRow = 0, goalCol = 0;
 
-/* Find start and goal cells in the maze text map */
-for (let r = 0; r < rows; r++) {
-  for (let c = 0; c < cols; c++) {
-    if (maze[r][c] === "S") {
-      startRow = r;
-      startCol = c;
-    }
-    if (maze[r][c] === "G") {
-      goalRow = r;
-      goalCol = c;
+/* Load maze definition from a text file */
+async function loadMaze(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to load maze from ${url}: ${res.status} ${res.statusText}`);
+  }
+
+  const text = await res.text();
+  maze = text
+    .split(/\r?\n/)
+    .filter(line => line.trim().length > 0);
+
+  if (maze.length === 0) {
+    throw new Error("Maze file is empty");
+  }
+
+  numRows = maze.length;
+  numCols = maze[0].length;
+
+  // Find start and goal positions
+  startRow = startCol = goalRow = goalCol = 0;
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
+      const ch = maze[r][c];
+      if (ch === "S") {
+        startRow = r;
+        startCol = c;
+      } else if (ch === "G") {
+        goalRow = r;
+        goalCol = c;
+      }
     }
   }
+
+  // Expose maze data to Python
+  globalThis.JS_MAZE = maze;
+  globalThis.JS_MAZE_NUM_ROWS = numRows;
+  globalThis.JS_MAZE_NUM_COLS = numCols;
+  globalThis.JS_MAZE_START_ROW = startRow;
+  globalThis.JS_MAZE_START_COL = startCol;
+  globalThis.JS_MAZE_GOAL_ROW = goalRow;
+  globalThis.JS_MAZE_GOAL_COL = goalCol;
 }
 
-/*
-  We expose start and goal coordinates to Python through
-  global variables on the JS side. Pyodide maps these into Python.
-*/
-globalThis.JS_MAZE_START_ROW = startRow;
-globalThis.JS_MAZE_START_COL = startCol;
-globalThis.JS_MAZE_GOAL_ROW = goalRow;
-globalThis.JS_MAZE_GOAL_COL = goalCol;
+await loadMaze("mazes/default.txt");
 
 /*
   Directions used for drawing and for updating the visual
-  position:
-
-    0 = up, 1 = right, 2 = down, 3 = left
+  position: 0 = up, 1 = right, 2 = down, 3 = left
 */
 const DIRS = [
   [-1, 0],
@@ -80,25 +67,16 @@ const DIRS = [
   [0, -1]
 ];
 
-/* -------------- Canvas and visual state -------------- */
-
 const canvas = document.getElementById("mazeCanvas");
 const ctx = canvas.getContext("2d");
-
-let cellSize;
-let offsetX;
-let offsetY;
 
 /*
   Compute how large each cell should be so that the entire maze
   fits inside the canvas and is centred.
 */
-function computeGeometry() {
-  cellSize = Math.min(canvas.width / cols, canvas.height / rows);
-  offsetX = (canvas.width - cols * cellSize) / 2;
-  offsetY = (canvas.height - rows * cellSize) / 2;
-}
-computeGeometry();
+let cellSize = Math.min(canvas.width / numCols, canvas.height / numRows);
+let offsetX = (canvas.width - numCols * cellSize) / 2;
+let offsetY = (canvas.height - numRows * cellSize) / 2;
 
 /*
   Visual state of the player. This is separate from the logical
@@ -109,30 +87,10 @@ let visRow, visCol, visDir;
 /* Queue of actions emitted by Python, e.g. "move", "turnLeft", "turnRight". */
 let actionQueue = [];
 
-/* -------------- Maze helper functions -------------- */
-
-/* Test whether a cell is a wall or outside the maze. */
-function isWall(r, c) {
-  if (r < 0 || r >= rows || c < 0 || c >= cols) return true;
-  return maze[r][c] === "#";
-}
-
-/*
-  The two functions below are the minimal primitives exported to Python.
-
-  - js_is_wall(r, c): lets Python query the map.
-  - js_enqueue_action(type): lets Python add an action that JS will animate later.
-*/
-globalThis.js_is_wall = isWall;
+/* lets Python add an action that JS will animate later. */
 globalThis.js_enqueue_action = function (type) {
   actionQueue.push({ type });
 };
-
-/* Helper to compute one step forward from a given position and direction. */
-function stepForward(row, col, dir) {
-  const [dr, dc] = DIRS[dir];
-  return [row + dr, col + dc];
-}
 
 /* Draw the triangular player marker in the current cell. */
 function drawPlayer(row, col, dir) {
@@ -169,8 +127,8 @@ function drawPlayer(row, col, dir) {
 function drawMaze() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
       const ch = maze[r][c];
       const x = offsetX + c * cellSize;
       const y = offsetY + r * cellSize;
@@ -197,7 +155,7 @@ function drawMaze() {
 function resetVisualState() {
   visRow = startRow;
   visCol = startCol;
-  visDir = 1; // facing right
+  visDir = 1;
   actionQueue = [];
   drawMaze();
 }
@@ -209,11 +167,15 @@ function appendOutput(text) {
   output.scrollTop = output.scrollHeight;
 }
 
-/* -------------- Animation of actions -------------- */
-
 /* Simple async sleep function for the animation loop. */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/* Helper to compute one step forward from a given position and direction. */
+function stepForward(row, col, dir) {
+  const [dr, dc] = DIRS[dir];
+  return [row + dr, col + dc];
 }
 
 /*
@@ -243,13 +205,11 @@ async function playActions(runId) {
   }
 }
 
-/* -------------- Pyodide setup -------------- */
-
 let pyodide;
 let runCounter = 0;
 
 /*
-  Create a single Pyodide instance and load maze_api.py into it.
+  Create a single Pyodide instance and load maze.py into it.
   This promise resolves once Pyodide is fully ready.
 */
 const pyodideReadyPromise = (async () => {
@@ -272,17 +232,15 @@ const pyodideReadyPromise = (async () => {
   });
 
   // Load the Python game API file into the interpreter
-  const resp = await fetch("maze_api.py");
+  const resp = await fetch("maze.py");
   const apiCode = await resp.text();
   await pyodide.runPythonAsync(apiCode);
 
   return pyodide;
 })();
 
-/* -------------- Running the user program -------------- */
-
 async function runProgram() {
-  // Wait for Pyodide and maze_api.py to be ready
+  // Wait for Pyodide and maze.py to be ready
   await pyodideReadyPromise;
 
   const code = document.getElementById("code").value;
@@ -328,9 +286,8 @@ async function runProgram() {
   }
 }
 
-/* -------------- UI wiring and defaults -------------- */
+/* UI wiring and defaults */
 
-/* Sample program for the text area, using the Python API. */
 const defaultCode = `# Example: right-hand rule maze solver
 # You can use full Python here (variables, functions, etc.)
 
@@ -344,10 +301,9 @@ while not at_goal():
         turn_left()
 `;
 
-// Put the sample program into the text area
 document.getElementById("code").value = defaultCode;
 
-// Hook up the Run button
+// Run button
 document.getElementById("runBtn").addEventListener("click", () => {
   runProgram();
 });
@@ -367,3 +323,31 @@ document.getElementById("sampleBtn").addEventListener("click", () => {
 
 // Initial draw when the page loads
 resetVisualState();
+
+/*  Simple JS tabs for the help panel */
+
+function initHelpTabs() {
+  const tabs = document.getElementById("help-tabs");
+  if (!tabs) return;
+
+  const buttons = tabs.querySelectorAll(".tabs-nav button");
+  const panes = tabs.querySelectorAll(".tab-pane");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.tab;
+
+      // update button active state
+      buttons.forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+
+      // show matching pane
+      panes.forEach((pane) => {
+        pane.classList.toggle("active", pane.dataset.tab === target);
+      });
+    });
+  });
+}
+
+initHelpTabs();

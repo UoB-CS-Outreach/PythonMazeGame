@@ -1,38 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <title>Maze Game (Pyodide, Python API)</title>
-
-  <!--
-    We keep the visual styling separate in style.css.
-    This file only defines the structure of the page.
-  -->
+  <title>Python Maze Solver</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 <div id="app">
-  <h1>Maze Game</h1>
+  <h1>Python Maze Solver</h1>
+  <h2>Code your own maze solver in Python! Scroll down for guides and instructions.</h2>
 
   <!--
     Top row: the maze canvas and the control buttons.
     The canvas is where the maze and player are drawn
     by JavaScript.
   -->
-  <div id="top-row">
+  <div class="row" id="top-row">
     <canvas id="mazeCanvas" width="480" height="480"></canvas>
 
     <div id="buttons">
-      <!-- Button to run whatever Python code is in the text area -->
       <button id="runBtn">Run program</button>
-
-      <!-- Button to reset the maze and player position -->
       <button id="resetBtn">Reset position</button>
-
-      <!-- Button to restore a sample program in the text area -->
       <button id="sampleBtn">Load sample</button>
-
-      <!-- Slider to control animation speed of the player -->
       <label id="speedLabel">
         Speed:
         <input type="range" id="speed" min="20" max="300" value="80">
@@ -41,26 +32,108 @@
   </div>
 
   <!--
-    Bottom row: left side is a text area where the user writes Python.
+    Middle row: left side is a text area where the user writes Python.
     Right side is a text area that shows printed output and errors.
   -->
-  <div id="bottom-row">
+  <div class="row" id="middle-row">
     <div>
-      <p class="panel-title">Program (Python via Pyodide)</p>
+      <p class="panel-title">Python Code</p>
       <textarea id="code" spellcheck="false"></textarea>
-      <p class="hint">
-        Full Python (variables, functions, etc.).<br>
-        Maze API (in Python): <code>move()</code>, <code>turn_left()</code>,
-        <code>turn_right()</code>, <code>path_ahead()</code>,
-        <code>path_left()</code>, <code>path_right()</code>,
-        <code>at_goal()</code>, plus helpers in <code>maze_api.py</code>.
-      </p>
     </div>
 
     <div>
       <p class="panel-title">Output</p>
-      <!-- Read only so the user cannot type into it by mistake -->
       <textarea id="output" readonly></textarea>
+    </div>
+  </div>
+
+  <!--
+    Bottom row: instructions / help windows
+  -->
+  <div class="row" id="bottom-row">
+    <div class="tabs" id="help-tabs">
+      <div class="tabs-nav">
+        <button type="button" data-tab="maze" class="active">Maze instructions</button>
+        <button type="button" data-tab="python">Python instructions</button>
+        <button type="button" data-tab="functions">Functions</button>
+      </div>
+
+      <div class="tabs-content">
+        <section class="tab-pane active" data-tab="maze">
+          <p><strong>Goal</strong></p>
+          <p>
+            Guide the blue triangle from the start (left side) to the green
+            goal square without walking into walls.
+          </p>
+
+          <p><strong>How it works</strong></p>
+          <ul>
+            <li>The maze is drawn in the top canvas.</li>
+            <li>Your program queues moves which are animated after it finishes.</li>
+            <li>If you call <code>move()</code> into a wall, an error is raised and the program stops.</li>
+          </ul>
+
+          <p><strong>Controls</strong></p>
+          <ul>
+            <li><em>Run program</em> runs whatever is in the program box.</li>
+            <li><em>Reset position</em> sends the player back to the start.</li>
+            <li><em>Load sample</em> restores a simple example program.</li>
+            <li>The speed slider adjusts animation speed.</li>
+          </ul>
+        </section>
+
+        <section class="tab-pane" data-tab="python">
+          <p><strong>Basic Python</strong></p>
+          <p>You can use variables, loops, <code>if</code> statements, and functions.</p>
+
+          <pre><code># Count how many steps you move
+steps = 0
+while path_ahead():
+    move()
+    steps += 1
+print("I moved", steps, "steps")</code></pre>
+
+          <p><strong>Conditions</strong></p>
+          <pre><code>if path_ahead():
+    move()
+elif path_right():
+    turn_right()
+else:
+    turn_left()</code></pre>
+
+          <p><strong>Your own functions</strong></p>
+          <pre><code>def go_forward_until_wall():
+    while path_ahead():
+        move()
+
+go_forward_until_wall()</code></pre>
+        </section>
+
+        <section class="tab-pane" data-tab="functions">
+          <p><strong>Core movement and sensing</strong></p>
+          <ul>
+            <li><code>move()</code> – move one step forward, error if there is a wall.</li>
+            <li><code>turn_left()</code> – turn 90 degrees left.</li>
+            <li><code>turn_right()</code> – turn 90 degrees right.</li>
+            <li><code>path_ahead()</code> – True if the cell in front is free.</li>
+            <li><code>path_left()</code> – True if the cell to your left is free.</li>
+            <li><code>path_right()</code> – True if the cell to your right is free.</li>
+            <li><code>at_goal()</code> – True if you are on the green goal square.</li>
+          </ul>
+
+          <p><strong>Helpers from <code>maze_api.py</code></strong></p>
+          <ul>
+            <li><code>reset_state()</code> – reset position and direction.</li>
+            <li><code>turn_around()</code> – turn 180 degrees.</li>
+            <li><code>step_until_wall()</code> – walk forwards until a wall, returns steps.</li>
+            <li><code>follow_right_wall(max_steps=1000)</code> – right hand rule solver.</li>
+          </ul>
+
+          <pre><code>reset_state()
+follow_right_wall()
+print("Reached goal?", at_goal())</code></pre>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -72,12 +145,10 @@
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
 
 <!--
-  maze.js contains:
-    * the maze layout
-    * code to draw and animate the player
-    * code to create a Pyodide instance
-    * code to run the user's Python program
+  JavaScript code for the maze app. Handles running the user's Python code
+  in Pyodide, updating the maze canvas, and swapping between instruction tabs.
 -->
 <script type="module" src="maze.js"></script>
+
 </body>
 </html>

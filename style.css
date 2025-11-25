@@ -1,11 +1,11 @@
-/* Base page styling */
+/* Base layout */
+
 body {
   font-family: system-ui, sans-serif;
   margin: 0;
   background: #f3f3f3;
 }
 
-/* Main app container in the middle of the page */
 #app {
   max-width: 1000px;
   margin: 16px auto;
@@ -15,25 +15,25 @@ body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-h1 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
+.row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #dddddd;
 }
 
-/* Top row: maze canvas and buttons, stacked vertically */
+/* Top row: maze and controls */
+
 #top-row {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Canvas border so the maze stands out */
 #mazeCanvas {
   border: 1px solid #999;
   background: #ddd;
 }
 
-/* Layout for the control buttons under the canvas */
 #buttons {
   margin-top: 8px;
   display: flex;
@@ -42,8 +42,7 @@ h1 {
   flex-wrap: wrap;
 }
 
-/* Basic button styling */
-button {
+#buttons button {
   padding: 6px 12px;
   border-radius: 4px;
   border: 1px solid #555;
@@ -55,13 +54,9 @@ button:hover {
   background: #e7e7e7;
 }
 
-#speedLabel {
-  font-size: 13px;
-}
+/* Middle row: code and output columns */
 
-/* Bottom row: program on left, output on right */
-#bottom-row {
-  margin-top: 16px;
+#middle-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -73,7 +68,6 @@ button:hover {
   font-weight: 600;
 }
 
-/* Program and output text areas share the same base look */
 textarea {
   width: 100%;
   box-sizing: border-box;
@@ -84,20 +78,85 @@ textarea {
   padding: 8px;
 }
 
-/* Output area uses dark background to look console like */
 #output {
   background: #111;
   color: #e2e2e2;
 }
 
-.hint {
-  font-size: 12px;
-  margin-top: 4px;
+/* Bottom row: single tabbed info panel */
+
+.tabs {
+  font-size: 13px;
 }
 
-/* On small screens, stack the program and output vertically */
+.tabs-nav {
+  display: flex;
+  border-bottom: 1px solid #c8c8c8;
+}
+
+.tabs-nav button {
+  flex: 1;
+  padding: 6px 8px;
+  text-align: center;
+  cursor: pointer;
+  background: #e7e7e7;
+  border: 1px solid #c8c8c8;
+  border-bottom: none;
+  font-size: 13px;
+  user-select: none;
+}
+
+.tabs-nav button + button {
+  border-left: none;
+}
+
+.tabs-nav button.active {
+  background: #ffffff;
+  font-weight: 600;
+}
+
+.tabs-content {
+  border: 1px solid #c8c8c8;
+  border-top: none;
+  background: #fafafa;
+  padding: 8px 10px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+.tabs-content ul {
+  margin: 6px 0 6px 20px;
+  padding: 0;
+}
+
+.tabs-content li {
+  margin-bottom: 4px;
+}
+
+.tabs-content pre {
+  background: #222;
+  color: #f0f0f0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.tabs-content code {
+  font-family: "Fira Code", Consolas, monospace;
+}
+
+/* Responsive layout */
+
 @media (max-width: 800px) {
-  #bottom-row {
+  #middle-row {
     grid-template-columns: 1fr;
   }
 }
