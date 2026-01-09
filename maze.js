@@ -349,11 +349,17 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 
 // Sample button restores the sample code
 document.getElementById("sampleBtn").addEventListener("click", async () => {
-    const code = document.getElementById("code");
-    const txt = await fetch("samples/default.txt");
-    code.value = await txt.text();
-    code.dispatchEvent(new Event("input")); // refresh line numbers
-    code.focus();
+  const code = document.getElementById("code");
+
+  const ok = window.confirm(
+    "Load sample code?\n\nThis will overwrite the current contents of the code box."
+  );
+  if (!ok) return;
+
+  const txt = await fetch("samples/default.txt");
+  code.value = await txt.text();
+  code.dispatchEvent(new Event("input")); // refresh line numbers
+  code.focus();
 });
 
 // Initial draw when the page loads
