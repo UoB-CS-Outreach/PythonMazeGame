@@ -1,8 +1,4 @@
-# Python-subset sample: right-hand rule solver
-# Allowed: if/elif/else, while, pass, and/or/not, the functions below
-# Functions you can call:
-#   move(), turn_left(), turn_right()
-#   path_ahead(), path_left(), path_right(), at_goal()
+# Example: right-hand rule maze solver
 
 while not at_goal():
     if path_right():

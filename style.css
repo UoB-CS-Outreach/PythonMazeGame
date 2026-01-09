@@ -1,162 +1,260 @@
 /* Base layout */
 
 body {
-  font-family: system-ui, sans-serif;
-  margin: 0;
-  background: #f3f3f3;
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    background: #f3f3f3;
 }
 
 #app {
-  max-width: 1000px;
-  margin: 16px auto;
-  padding: 16px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    max-width: 1000px;
+    margin: 16px auto;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .row {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #dddddd;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #dddddd;
 }
 
 /* Top row: maze and controls */
 
 #top-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #mazeCanvas {
-  border: 1px solid #999;
-  background: #ddd;
+    border: 1px solid #999;
+    background: #ddd;
 }
 
 #buttons {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 #buttons button {
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid #555;
-  background: #f5f5f5;
-  cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #f5f5f5;
+    cursor: pointer;
 }
 
 button:hover {
-  background: #e7e7e7;
+    background: #e7e7e7;
 }
 
 /* Middle row: code and output columns */
 
 #middle-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .panel-title {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  font-weight: 600;
+    margin: 0 0 4px 0;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 textarea {
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 260px;
-  resize: vertical;
-  font-family: "Fira Code", Consolas, monospace;
-  font-size: 13px;
-  padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 260px;
+    resize: vertical;
+    font-family: "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    padding: 8px;
+}
+
+.code-editor {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    align-items: stretch;
+    height: 260px;
+    min-height: 260px;
+    resize: vertical;
+    overflow: hidden;
+    border: 1px solid #bbb;
+}
+
+#lineNumbers {
+    margin: 0;
+    padding: 8px 6px;
+    overflow: hidden;
+    text-align: right;
+    user-select: none;
+    color: #888;
+    background: #f0f0f0;
+    font-family: "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    border: 0;
+    border-right: 1px solid #bbb;
+}
+
+#code {
+    border-left: none;
+    line-height: 1.4;
+    height: 100%;
+    min-height: 0;
+    resize: none;
+    overflow: auto;
+    border: 0;
 }
 
 #output {
-  background: #111;
-  color: #e2e2e2;
+    background: #111;
+    color: #e2e2e2;
 }
+
+.middle-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.middle-actions #sampleBtn {
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #f5f5f5;
+    cursor: pointer;
+    width: 220px;
+    max-width: 70%;
+}
+
 
 /* Bottom row: single tabbed info panel */
 
 .tabs {
-  font-size: 13px;
+    font-size: 13px;
 }
 
 .tabs-nav {
-  display: flex;
-  border-bottom: 1px solid #c8c8c8;
+    display: flex;
+    border-bottom: 1px solid #c8c8c8;
 }
 
 .tabs-nav button {
-  flex: 1;
-  padding: 6px 8px;
-  text-align: center;
-  cursor: pointer;
-  background: #e7e7e7;
-  border: 1px solid #c8c8c8;
-  border-bottom: none;
-  font-size: 13px;
-  user-select: none;
+    flex: 1;
+    padding: 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    background: #e7e7e7;
+    border: 1px solid #c8c8c8;
+    border-bottom: none;
+    font-size: 13px;
+    user-select: none;
 }
 
 .tabs-nav button + button {
-  border-left: none;
+    border-left: none;
 }
 
 .tabs-nav button.active {
-  background: #ffffff;
-  font-weight: 600;
+    background: #ffffff;
+    font-weight: 600;
 }
 
 .tabs-content {
-  border: 1px solid #c8c8c8;
-  border-top: none;
-  background: #fafafa;
-  padding: 8px 10px;
+    border: 1px solid #c8c8c8;
+    border-top: none;
+    background: #fafafa;
+    padding: 8px 10px;
 }
 
 .tab-pane {
-  display: none;
+    display: none;
 }
 
 .tab-pane.active {
-  display: block;
+    display: block;
 }
 
 .tabs-content ul {
-  margin: 6px 0 6px 20px;
-  padding: 0;
+    margin: 6px 0 6px 20px;
+    padding: 0;
 }
 
 .tabs-content li {
-  margin-bottom: 4px;
+    margin-bottom: 4px;
 }
 
 .tabs-content pre {
-  background: #222;
-  color: #f0f0f0;
-  padding: 6px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  overflow-x: auto;
-  margin: 6px 0;
+    background: #222;
+    color: #f0f0f0;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    overflow-x: auto;
+    margin: 6px 0;
 }
 
 .tabs-content code {
-  font-family: "Fira Code", Consolas, monospace;
+    font-family: "Fira Code", Consolas, monospace;
 }
+
+.tab-section + .tab-section {
+    border-top: 1px solid #dddddd;
+    margin-top: 12px;
+    padding-top: 12px;
+}
+
+.tab-section.has-image {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 12px;
+    align-items: start;
+}
+
+.tab-section-aside {
+    border-left: 1px solid #dddddd;
+    padding-left: 12px;
+}
+
+.tab-section-aside img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid #c8c8c8;
+    border-radius: 6px;
+    background: #fff;
+}
+
 
 /* Responsive layout */
 
 @media (max-width: 800px) {
-  #middle-row {
-    grid-template-columns: 1fr;
-  }
+    #middle-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .tab-section.has-image {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-section-aside {
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1px solid #dddddd;
+        padding-top: 10px;
+    }
 }

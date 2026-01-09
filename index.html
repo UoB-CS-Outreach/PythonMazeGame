@@ -2,140 +2,444 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Python Maze Solver</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Python Maze Solver</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 <div id="app">
-  <h1>Python Maze Solver</h1>
-  <h2>Code your own maze solver in Python! Scroll down for guides and instructions.</h2>
+    <h1>Python Maze Solver</h1>
+    <h2>Code your own maze solver in Python! Scroll down for guides and
+        instructions.</h2>
 
-  <!--
-    Top row: the maze canvas and the control buttons.
-    The canvas is where the maze and player are drawn
-    by JavaScript.
-  -->
-  <div class="row" id="top-row">
-    <canvas id="mazeCanvas" width="480" height="480"></canvas>
+    <!--
+      Top row: the maze canvas and the control buttons.
+      The canvas is where the maze and player are drawn
+      by JavaScript.
+    -->
+    <div class="row" id="top-row">
+        <canvas id="mazeCanvas" width="480" height="480"></canvas>
 
-    <div id="buttons">
-      <button id="runBtn">Run program</button>
-      <button id="resetBtn">Reset position</button>
-      <button id="sampleBtn">Load sample</button>
-      <label id="speedLabel">
-        Speed:
-        <input type="range" id="speed" min="20" max="300" value="80">
-      </label>
-    </div>
-  </div>
-
-  <!--
-    Middle row: left side is a text area where the user writes Python.
-    Right side is a text area that shows printed output and errors.
-  -->
-  <div class="row" id="middle-row">
-    <div>
-      <p class="panel-title">Python Code</p>
-      <textarea id="code" spellcheck="false"></textarea>
+        <div id="buttons">
+            <button id="runBtn">Run program</button>
+            <button id="resetBtn">Reset position</button>
+            <label id="speedLabel">
+                Speed:
+                <input type="range" id="speed" min="1" max="200" value="100">
+            </label>
+        </div>
     </div>
 
-    <div>
-      <p class="panel-title">Output</p>
-      <textarea id="output" readonly></textarea>
+    <!--
+      Middle row: left side is a text area where the user writes Python.
+      Right side is a text area that shows printed output and errors.
+    -->
+    <div class="row" id="middle-row">
+        <div>
+            <p class="panel-title">Python Code</p>
+            <div class="code-editor">
+                <pre id="lineNumbers" aria-hidden="true"></pre>
+                <textarea id="code" spellcheck="false" wrap="off"></textarea>
+            </div>
+        </div>
+
+        <div>
+            <p class="panel-title">Output</p>
+            <textarea id="output" readonly></textarea>
+        </div>
+
+        <div class="middle-actions">
+            <button id="sampleBtn" type="button">Load sample</button>
+        </div>
     </div>
-  </div>
 
-  <!--
-    Bottom row: instructions / help windows
-  -->
-  <div class="row" id="bottom-row">
-    <div class="tabs" id="help-tabs">
-      <div class="tabs-nav">
-        <button type="button" data-tab="maze" class="active">Maze instructions</button>
-        <button type="button" data-tab="python">Python instructions</button>
-        <button type="button" data-tab="functions">Functions</button>
-      </div>
+    <!--
+      Bottom row: instructions / help windows
+    -->
+    <div class="row" id="bottom-row">
+        <div class="tabs" id="help-tabs">
+            <div class="tabs-nav">
+                <button type="button" data-tab="maze" class="active">Maze Instructions
+                </button>
+                <button type="button" data-tab="guide">Beginners Guide</button>
+            </div>
 
-      <div class="tabs-content">
-        <section class="tab-pane active" data-tab="maze">
-          <p><strong>Goal</strong></p>
-          <p>
-            Guide the blue triangle from the start (left side) to the green
-            goal square without walking into walls.
-          </p>
+            <div class="tabs-content">
+                <section class="tab-pane active" data-tab="maze">
+                    <div class="tab-section">
+                        <p><strong>Goal</strong></p>
+                        <p>
+                            Guide the blue triangle from the start (top left) to the
+                            green goal square (bottom right) without walking into walls
+                            using Python code.
+                        </p>
 
-          <p><strong>How it works</strong></p>
-          <ul>
-            <li>The maze is drawn in the top canvas.</li>
-            <li>Your program queues moves which are animated after it finishes.</li>
-            <li>If you call <code>move()</code> into a wall, an error is raised and the program stops.</li>
-          </ul>
+                        <p><strong>Controls</strong></p>
+                        <ul>
+                            <li><em>Run program</em> runs whatever is in the program
+                                box to move the triangle.
+                            </li>
+                            <li><em>Reset position</em> sends the triangle back to the
+                                start.
+                            </li>
+                            <li>The <em>speed</em> slider adjusts animation speed.</li>
+                            <li><em>Load sample</em> loads a sample right-hand maze
+                                solver into the code box.
+                            </li>
+                        </ul>
+                    </div>
 
-          <p><strong>Controls</strong></p>
-          <ul>
-            <li><em>Run program</em> runs whatever is in the program box.</li>
-            <li><em>Reset position</em> sends the player back to the start.</li>
-            <li><em>Load sample</em> restores a simple example program.</li>
-            <li>The speed slider adjusts animation speed.</li>
-          </ul>
-        </section>
+                    <div class="tab-section">
+                        <p>The <strong>Python Code</strong> pane contains an area to
+                            write code for solving the maze. To move the triangle to the
+                            end goal, you must write code in Python utilising the
+                            following functions:</p>
+                        <ul>
+                            <li><code>at_goal()</code> – Returns <code>True</code> if
+                                the triangle is on the green goal square, else returns
+                                <code>False</code>.
+                            </li>
+                            <li><code>move()</code> – Moves the triangle one square
+                                forward. Throws a <code>RuntimeError</code> if there is
+                                a wall.
+                            </li>
+                            <li><code>turn_left()</code> – Turns the triangle 90 degrees
+                                left.
+                            </li>
+                            <li><code>turn_right()</code> – Turns the triangle 90
+                                degrees right.
+                            </li>
+                            <li><code>path_ahead()</code> – Returns <code>True</code> if
+                                the cell in front of the triangle can be moved to, else
+                                returns <code>False</code>.
+                            </li>
+                            <li><code>path_behind()</code> – Returns <code>True</code>
+                                if the cell behind the triangle can be moved to, else
+                                returns <code>False</code>.
+                            </li>
+                            <li><code>path_left()</code> – Returns <code>True</code> if
+                                the cell to the left of the triangle can be moved to,
+                                else returns <code>False</code>.
+                            </li>
+                            <li><code>path_right()</code> – Returns <code>True</code> if
+                                the cell to the right of the triangle can be moved to,
+                                else returns <code>False</code>.
+                            </li>
+                        </ul>
+                        <p>To complete the maze, you can use variables, loops,
+                            conditional statements, and functions among other Python
+                            language features.</p>
+                        <p>The <strong>Output</strong> pane will contain any
+                            <code>print</code> statement or errors thrown when you run
+                            your code.</p>
+                    </div>
 
-        <section class="tab-pane" data-tab="python">
-          <p><strong>Basic Python</strong></p>
-          <p>You can use variables, loops, <code>if</code> statements, and functions.</p>
-
-          <pre><code># Count how many steps you move
-steps = 0
+                    <div class="tab-section">
+                        <p><strong>Loops</strong></p>
+                        <p>Both <code>for</code> and <code>while</code> loops can be
+                            used:</p>
+                        <pre><code>steps = 0
 while path_ahead():
     move()
     steps += 1
-print("I moved", steps, "steps")</code></pre>
+print(f"I moved {steps} steps")</code></pre>
+                        <p>A <code>while</code> loop to run until you reach the end is
+                            likely a core component of any implementation</p>
 
-          <p><strong>Conditions</strong></p>
-          <pre><code>if path_ahead():
+                        <p><strong>Conditions</strong></p>
+                        <p>Standard conditional statements in <code>if</code>, <code>elif</code>
+                            and <code>else</code> are available and crucial in
+                            navigating the maze:</p>
+                        <pre><code>if path_ahead():
     move()
 elif path_right():
     turn_right()
 else:
     turn_left()</code></pre>
 
-          <p><strong>Your own functions</strong></p>
-          <pre><code>def go_forward_until_wall():
+                        <p><strong>New Functions</strong></p>
+                        <p>Both more complex solutions, you can create your own
+                            functions:</p>
+                        <pre><code>def go_forward_until_wall():
     while path_ahead():
         move()
 
 go_forward_until_wall()</code></pre>
-        </section>
+                    </div>
 
-        <section class="tab-pane" data-tab="functions">
-          <p><strong>Core movement and sensing</strong></p>
-          <ul>
-            <li><code>move()</code> – move one step forward, error if there is a wall.</li>
-            <li><code>turn_left()</code> – turn 90 degrees left.</li>
-            <li><code>turn_right()</code> – turn 90 degrees right.</li>
-            <li><code>path_ahead()</code> – True if the cell in front is free.</li>
-            <li><code>path_left()</code> – True if the cell to your left is free.</li>
-            <li><code>path_right()</code> – True if the cell to your right is free.</li>
-            <li><code>at_goal()</code> – True if you are on the green goal square.</li>
-          </ul>
+                    <div class="tab-section">
+                        <p><strong>Common Mistakes</strong></p>
+                        <ul>
+                            <li>Missing colon (<code>:</code>) - <code>"SyntaxError:
+                                expected ':'"</code> certain lines of code such as
+                                conditionals (<code>if</code>, <code>elif</code> and
+                                <code>else</code> and loops (<code>while</code> and
+                                <code>for</code> ) must end in a <code>:</code>
+                                character.
+                            </li>
+                            <li>Wrong indentation - <code>"IndentationError"</code> Code
+                                after conditionals, loops and function declarations must
+                                be evenly indented using spaces or tabs. Use the same
+                                amount of spaces for all indentation (by default 4
+                                spaces).
+                            </li>
+                            <li>Infinite loop - <code>"StepLimitError: Program
+                                stopped"</code> When using loops, make sure there is a
+                                way to exit, or it will run forever! This may also
+                                happen if your program cannot find the goal. We
+                                automatically stop the program for this exercise in both
+                                cases.
+                            </li>
+                            <li>Running into a wall - <code>RuntimeError: Wall
+                                ahead</code> If you attempt to move into a wall the
+                                program will stop. Try using a function to check if
+                                there is something where you want to move first.
+                            </li>
+                        </ul>
+                    </div>
+                </section>
 
-          <p><strong>Helpers from <code>maze_api.py</code></strong></p>
-          <ul>
-            <li><code>reset_state()</code> – reset position and direction.</li>
-            <li><code>turn_around()</code> – turn 180 degrees.</li>
-            <li><code>step_until_wall()</code> – walk forwards until a wall, returns steps.</li>
-            <li><code>follow_right_wall(max_steps=1000)</code> – right hand rule solver.</li>
-          </ul>
+                <section class="tab-pane" data-tab="guide">
+                    <div class="tab-section">
+                        <p><strong>Beginner guide</strong></p>
+                        <p>
+                            This activity is about giving the triangle instructions
+                            using Python code to move it through the maze.
+                        </p>
+                        <p> Your program runs from top to bottom.
+                            If it tries to walk into a wall, it stops and shows an error
+                            in the Output box.</p>
+                        <p>
+                            In Python, spaces matter. Lines <em>inside</em> an
+                            <code>if</code> or <code>while</code> must be indented
+                            (usually 4 spaces). The Tab key on the right of the keyboard
+                            can be used to enter 4 spaces in the code box.
+                        </p>
+                    </div>
 
-          <pre><code>reset_state()
-follow_right_wall()
-print("Reached goal?", at_goal())</code></pre>
-        </section>
-      </div>
+                    <div class="tab-section">
+                        <p><strong>Step 1: Your first commands</strong></p>
+                        <p>Try these one at a time and press <em>Run program</em>:</p>
+                        <pre><code>move()</code></pre>
+                        <pre><code>turn_right()
+move()
+move()</code></pre>
+                        <pre><code>turn_left()
+move()
+</code></pre>
+                        <p>
+                            What happens for each of them? What happens if you do not
+                            remove the previous code before adding the next?
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 2: Checking for a wall (if statements)</strong>
+                        </p>
+                        <p>
+                            Before moving, you can ask “is there space ahead?”. These
+                            functions return <code>True</code> or <code>False</code>.
+                        </p>
+                        <pre><code>if path_ahead():
+    move()
+else:
+    turn_right()</code></pre>
+                        <p>
+                            Try adding <code>turn_right()</code> and/or <code>turn_left()</code>
+                            before and see what happens how does this change the
+                            triangles movement from before?
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 3: Repeating actions (while loops)</strong></p>
+                        <p>
+                            A loop repeats code. <code>while</code> loops continue until
+                            a condition is met. This one keeps moving until a wall is
+                            directly ahead:
+                        </p>
+                        <pre><code>while path_ahead():
+    move()</code></pre>
+                        <p>
+                            In this case, the goal is to reach the green square, so we
+                            will want to add a condition somewhere using an if or loop
+                            to end any loops when <code>at_goal()</code> becomes <code>True</code>.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4: Build a simple maze solver</strong></p>
+                        <p>
+                            We are going to build a small solver that follows these
+                            rules:
+                        </p>
+                        <ol>
+                            <li>If we can move forward, do it.</li>
+                            <li>Otherwise, try turning right and moving.</li>
+                            <li>If that is not possible, try turning left and moving.
+                            </li>
+                            <li>If none are possible, turn around (a dead end).</li>
+                        </ol>
+                        <p>
+                            The key idea is: we keep repeating these rules until we
+                            reach the goal.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4a: Create a main loop</strong></p>
+                        <p>
+                            Start with a loop that will keep running until the triangle
+                            reaches the green square:
+                        </p>
+                        <pre><code>while not at_goal():
+    move()</code></pre>
+                        <p>
+                            Try running this. You will find it runs into a wall soon,
+                            but it will keep moving until then.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4b: Add a step counter (optional)</strong></p>
+                        <p>
+                            Next let’s count how many actions we take. This is useful
+                            for tracking progress. To do this we will create a variable
+                            called "steps" and set it to 0. Add this to your current
+                            code, including your line to move the triangle. It should
+                            look somthing like this:
+                        </p>
+                        <pre><code>steps = 0
+
+while not at_goal():
+    steps = steps + 1
+    print("Step", steps)</code></pre>
+                        <p>
+                            Try running your program with these additions. If we are
+                            making progress and still moving you should see a few steps
+                            printed before we run into a wall. If you see many
+                            print-outs and the tab freezes for a few seconds, you may be
+                            in an infinite loop. Try adding some movement code to your
+                            program.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4c: Rule 1 — move forward when possible</strong>
+                        </p>
+                        <p>
+                            Now we add the first rule: if there is space ahead, move
+                            forward.
+                        </p>
+                        <pre><code>while not at_goal():
+    if path_ahead():
+        move()</code></pre>
+                        <p>
+                            The triangle should move forward until it hits a wall, then
+                            it will get stuck because we haven’t told it what to do when
+                            forward is blocked.
+                        </p>
+                        <p>
+                            Remember: indentation matters in Python! The
+                            <code>move()</code> line must be indented under the
+                            <code>if</code>. This can also be used to move your <code>print</code>
+                            statement outside the loop if you find the multiple print
+                            outs annoying and just want the final count at the end.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4d: Rule 2 — if forward is blocked, try
+                            right</strong></p>
+                        <p>
+                            Extend the <code>if</code> with an <code>elif</code> (“else
+                            if”, another condition to check if the first is
+                            <code>False</code>) We want to use the
+                            <code>path_right()</code> function to check if we can turn
+                            and <code>turn_right()</code> to orient our triangle.
+                        </p>
+                        <pre><code>while not at_goal():
+    if path_ahead():
+        move()
+    elif path_right():
+        turn_right()
+        move()</code></pre>
+                        <p>
+                            We should get further now, as the triangle can turn right
+                            when it hits a wall.
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4e: Rule 3 — if right is blocked, try
+                            left</strong></p>
+                        <p>
+                            Now do the same, but with functions to move left. </p>
+                        <pre><code>while not at_goal():
+    if path_ahead():
+        move()
+    elif path_right():
+        turn_right()
+        move()
+    elif path_left():
+        turn_left()
+        move()</code></pre>
+                        <p>
+                            If your program runs correctly, you should notice that this
+                            is enough to reach the end of this maze and reach the goal!
+                            Good job!
+                        </p>
+                        <p>
+                        </p>
+                    </div>
+
+                    <div class="tab-section">
+                        <p><strong>Step 4f: Rule 4 — dead ends (turn around)</strong>
+                        </p>
+                        <p>
+                            What if forward, left, and right are all blocked in a
+                            different maze? That means we are in a dead end.
+                            We can turn around by turning right twice. Add an
+                            <code>else</code> block to handle this case, which runs of
+                            none of the other conditionals are <code>true</code>.
+                        </p>
+                        <pre><code>while not at_goal():
+    if path_ahead():
+        move()
+    elif path_right():
+        turn_right()
+        move()
+    elif path_left():
+        turn_left()
+        move()
+    else:
+        turn_right()
+        turn_right()</code></pre>
+                    </div>
+
+                    <div class="tab-section">
+                        <p>If you want to do extra, try changing the solver and see how
+                            this changes the code, maze animation and output</p>
+                        <ul>
+                            <li><strong>Prefer left instead of right:</strong> swap the
+                                <code>path_left()</code> and <code>path_right()</code>
+                                blocks.
+                            </li>
+                            <li><strong>Print the final step count:</strong> count the
+                                number of steps your make, and then print the number
+                                outside the loop when the goal is reached.
+                            </li>
+                            <li>Create your own Python function like <code>def
+                                turn_around():</code> and call it instead of repeating
+                                two right turns.
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!--

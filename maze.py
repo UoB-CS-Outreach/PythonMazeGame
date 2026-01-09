@@ -5,6 +5,9 @@ functions that the user can call to navigate a maze.
 The actual maze and drawing are handled by JavaScript in maze.js.
 """
 
+import sys
+import time
+
 from js import (
     JS_MAZE,
     JS_MAZE_GOAL_COL,
@@ -19,13 +22,54 @@ from js import (
 # Direction encoding:
 # 0 = up, 1 = right, 2 = down, 3 = left
 DIRS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+DIR_NAMES = ["up", "right", "down", "left"]
 
 # position state
 row = int(JS_MAZE_START_ROW)
 col = int(JS_MAZE_START_COL)
 direction = 1
 
+
 # JS functions
+
+
+def run_user_code(src, max_seconds, max_steps):
+    """
+    Execute user code with a time + executed-lines limit.
+    Raises TimeoutError if the limits are exceeded.
+    """
+    start = time.time()
+    steps = 0
+
+    class StepLimitError(Exception):
+        """Raised when user code exceeds the allowed step/time budget."""
+
+    def trace(frame, event, arg):
+        nonlocal steps
+
+        if frame.f_code.co_filename != "<exec>":
+            return None
+
+        if event == "line":
+            steps += 1
+            if steps > max_steps:
+                raise StepLimitError(
+                    f"Program stopped: too many steps (>{max_steps}). "
+                    "Check for an infinite loop."
+                )
+            if (time.time() - start) > max_seconds:
+                raise StepLimitError(
+                    f"Program stopped: took too long (>{max_seconds:.1f}s). "
+                    "Check for an infinite loop."
+                )
+        return trace
+
+    sys.settrace(trace)
+    try:
+        code_obj = compile(src, "<exec>", "exec")
+        exec(code_obj, globals(), globals())
+    finally:
+        sys.settrace(None)
 
 
 def reset_state():
@@ -54,9 +98,16 @@ def _is_wall(r, c):
     """
     Return True if the cell (r, c) is a wall or out of bounds.
     """
-    if r < 0 or r >= int(JS_MAZE_NUM_ROWS) or c < 0 or c >= int(JS_MAZE_NUM_COLS):
+    if not _in_bounds(r, c):
         return True
     return JS_MAZE[r][c] == "#"
+
+
+def _in_bounds(r, c):
+    """
+    Return True if the cell (r, c) is in bounds.
+    """
+    return 0 <= r < int(JS_MAZE_NUM_ROWS) and 0 <= c < int(JS_MAZE_NUM_COLS)
 
 
 # Maze game functions
@@ -74,8 +125,20 @@ def move():
     """
     global row, col
     nr, nc = _step_forward(row, col, direction)
-    if _is_wall(nr, nc):
-        raise RuntimeError("Tried to move into a wall")
+
+    if not _in_bounds(nr, nc):
+        raise RuntimeError(
+            f"Can't move {DIR_NAMES[direction]} from (row={row}, col={col}) — "
+            "that would leave the maze. Try checking path_ahead() first."
+        )
+
+    if JS_MAZE[nr][nc] == "#":
+        raise RuntimeError(
+            f"Wall ahead: can't move {DIR_NAMES[direction]} from "
+            f"(row={row}, col={col}) into (row={nr}, col={nc}). Try checking "
+            f"path_ahead() before move()."
+        )
+
     row, col = nr, nc
     js_enqueue_action("move")
 
