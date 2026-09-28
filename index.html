@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- data-mode is "python" or "blocks"; maze.js switches it. -->
+<html lang="en" data-mode="python">
 
 <head>
     <meta charset="UTF-8">
@@ -20,7 +21,6 @@
         <span class="brand-divider" aria-hidden="true"></span>
         <strong>Python Maze Solver</strong>
     </a>
-    <span class="mode-pill">Open day activity</span>
 </header>
 
 <main id="app">
@@ -39,6 +39,11 @@
 
             <div class="maze-stage">
                 <canvas id="mazeCanvas" width="480" height="480"></canvas>
+                <!-- Explains a run that Python had to stop, e.g. an endless loop. -->
+                <div id="mazeNotice" class="maze-notice" role="status" hidden>
+                    <strong id="mazeNoticeTitle"></strong>
+                    <span id="mazeNoticeText"></span>
+                </div>
             </div>
 
             <div id="buttons">
@@ -96,18 +101,40 @@
             <div class="panel-heading">
                 <div>
                     <p class="step-label">Your program</p>
-                    <h2 id="codeHeading">Python code</h2>
+                    <h2 id="codeHeading">
+                        <span class="for-python">Python code</span>
+                        <span class="for-blocks">Blocks</span>
+                    </h2>
+                </div>
+                <div id="modeSwitch" class="mode-switch" role="group"
+                     aria-label="Write the program with">
+                    <button type="button" data-mode="blocks"
+                            aria-pressed="false">Blocks</button>
+                    <button type="button" data-mode="python"
+                            aria-pressed="true">Python</button>
                 </div>
             </div>
 
-            <div class="code-editor">
+            <div class="code-editor for-python">
                 <pre id="lineNumbers" aria-hidden="true"></pre>
                 <textarea id="code" spellcheck="false" wrap="off"></textarea>
             </div>
 
+            <!-- blocks.js replaces this message with the blocks workspace. -->
+            <div id="blocksEditor" class="blocks-editor for-blocks">
+                <p class="blocks-unavailable">
+                    Blocks could not be loaded. Switch to Python to carry on.
+                </p>
+            </div>
+
             <div class="middle-actions">
-                <button id="sampleBtn" class="button secondary" type="button">
+                <button id="sampleBtn" class="button secondary for-python"
+                        type="button">
                     Load sample
+                </button>
+                <button id="convertBtn" class="button secondary for-blocks"
+                        type="button">
+                    Convert to Python
                 </button>
             </div>
 
@@ -115,8 +142,8 @@
             <textarea id="output" readonly></textarea>
         </section>
 
-        <!-- Instructions and reference material. -->
-        <section class="panel help-panel">
+        <!-- Instructions and reference material, all about the Python. -->
+        <section class="panel help-panel for-python">
             <div class="tabs" id="help-tabs">
                 <div class="tabs-nav" id="referenceTabs">
                     <button type="button" data-tab="maze" class="active">Maze API
@@ -252,7 +279,9 @@ go_forward_until_wall()</code></pre>
                                 </li>
                                 <li><strong><code>IndentationError</code>:</strong> use the
                                     same indentation throughout a block, normally four
-                                    spaces. Pressing Tab in the editor inserts four spaces.
+                                    spaces. After a line ending in a colon, Enter indents
+                                    the next line for you. Tab indents every selected line
+                                    and Shift+Tab unindents them.
                                 </li>
                                 <li><strong><code>RuntimeError: Wall ahead</code>:</strong>
                                     call a path question before <code>move()</code>.
@@ -546,11 +575,19 @@ while not at_goal():
         <h2 id="tutorialSelectorTitle">Select a tutorial</h2>
         <p id="tutorialSelectorDescription">
             Choose the option that best matches your current experience. All
-            options use the same Python editor and maze. You can change the
-            tutorial later.
+            options use the same mazes. You can change the tutorial later.
         </p>
 
         <div class="tutorial-options">
+            <button type="button" class="tutorial-option"
+                    data-tutorial-mode="blocks">
+                <span class="tutorial-option-title">Start with blocks</span>
+                <span class="tutorial-option-description">
+                    No typing and no experience needed. Snap blocks together to
+                    guide the triangle, then turn them into Python if you want.
+                </span>
+            </button>
+
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="programming">
                 <span class="tutorial-option-title">New to coding</span>
@@ -581,6 +618,20 @@ while not at_goal():
 
         <button id="closeTutorialSelector" class="tutorial-selector-close"
                 type="button" hidden>Keep current tutorial</button>
+    </div>
+</dialog>
+
+<!-- Offered once, after the first time the goal is reached. -->
+<dialog id="goalDialog" class="goal-dialog" aria-labelledby="goalDialogTitle"
+        aria-describedby="goalDialogText">
+    <h2 id="goalDialogTitle"></h2>
+    <p id="goalDialogText"></p>
+    <div class="goal-dialog-actions">
+        <button id="goalDialogLater" class="button secondary" type="button">
+            Not now
+        </button>
+        <button id="goalDialogAction" class="button primary" type="button">
+        </button>
     </div>
 </dialog>
 
@@ -633,6 +684,15 @@ while not at_goal():
   It builds its own markup and talks to the game through globalThis.mazeGame.
 -->
 <script defer src="js/challenge.js"></script>
+
+<!--
+  Blocks mode. Blockly is Google's open-source blocks editor, the one Scratch's
+  editor grew from; blocks.js defines the maze's own blocks on top of it.
+-->
+<script defer src="https://cdn.jsdelivr.net/npm/blockly@13.3.0/blockly_compressed.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/blockly@13.3.0/msg/en.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/blockly@13.3.0/python_compressed.js"></script>
+<script defer src="js/blocks.js"></script>
 
 </body>
 </html>

@@ -107,15 +107,6 @@ a:focus-visible {
     background: rgba(255, 255, 255, 0.3);
 }
 
-.mode-pill {
-    padding: 7px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    border-radius: 99px;
-    color: #dce8f2;
-    font-size: 0.8rem;
-    font-weight: 700;
-}
-
 /* Layout */
 
 main {
@@ -198,12 +189,54 @@ h2 {
 
 /* Maze panel */
 
+/*
+  Relative positioning anchors the notice over the maze. Without a z-index it
+  creates no stacking context, so the tutorial spotlight still works here.
+*/
 .maze-stage {
+    position: relative;
     display: flex;
     justify-content: center;
     padding: 10px;
     border-radius: 12px;
     background: var(--wash);
+}
+
+/*
+  Laid over the top of the maze rather than above it, so showing it does not
+  push the maze down in the middle of a replay. It never takes clicks.
+*/
+.maze-notice {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    z-index: 2;
+    width: min(440px, calc(100% - 40px));
+    transform: translateX(-50%);
+    padding: 10px 14px;
+    border-left: 4px solid var(--coral);
+    border-radius: 0 10px 10px 0;
+    background: rgba(254, 232, 229, 0.96);
+    color: var(--ink);
+    box-shadow: 0 8px 22px rgba(8, 31, 61, 0.22);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.maze-notice[data-place="bottom"] {
+    top: auto;
+    bottom: 20px;
+}
+
+.maze-notice strong {
+    display: block;
+}
+
+/* A tutorial step lifts the running maze above its backdrop; lift this too. */
+#mazeCanvas.tutorial-highlight ~ .maze-notice,
+#mazeCanvas.tutorial-maze-running ~ .maze-notice {
+    z-index: 901;
 }
 
 #mazeCanvas {
@@ -393,6 +426,100 @@ textarea {
     display: flex;
     justify-content: flex-end;
     margin-top: 10px;
+}
+
+/*
+  Blocks or Python. <html data-mode> says which, and each mode's own parts
+  carry .for-blocks or .for-python. The help panel and challenge mode are all
+  about typed Python, so blocks mode leaves them out.
+*/
+html[data-mode="blocks"] .for-python,
+html:not([data-mode="blocks"]) .for-blocks,
+html[data-mode="blocks"] #challenge-mode {
+    display: none;
+}
+
+/* If Blockly could not be downloaded, do not offer what cannot work. */
+html[data-blocks="unavailable"] #modeSwitch [data-mode="blocks"],
+html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
+    display: none;
+}
+
+.mode-switch {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid #cad5e1;
+    border-radius: 12px;
+    background: var(--wash);
+}
+
+.mode-switch button {
+    min-height: 36px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--navy-soft);
+    font-weight: 800;
+}
+
+.mode-switch button[aria-pressed="true"] {
+    background: var(--paper);
+    color: var(--blue);
+    box-shadow: 0 1px 4px rgba(16, 35, 61, 0.16);
+}
+
+/*
+  Blocks need more room than lines of text to be dragged about comfortably,
+  and the tutorial's right-hand rule should fit without scrolling on a 768
+  pixel high screen.
+*/
+.blocks-editor {
+    height: clamp(380px, 64vh, 660px);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.blocks-unavailable {
+    margin: 0;
+    padding: 16px;
+    color: var(--muted);
+}
+
+/* The window offered after first reaching the goal. */
+.goal-dialog {
+    width: min(460px, calc(100vw - 32px));
+    padding: 24px;
+    border: 0;
+    border-radius: var(--radius);
+    box-shadow: 0 22px 60px rgba(8, 31, 61, 0.4);
+    color: var(--ink);
+}
+
+.goal-dialog::backdrop {
+    background: rgba(8, 31, 61, 0.55);
+}
+
+.goal-dialog h2 {
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+}
+
+.goal-dialog p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.goal-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 /* Help panel */

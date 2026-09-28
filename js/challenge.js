@@ -4,9 +4,14 @@
  * A wall follower usually works the first time it is run, which is not the
  * same as being correct. Challenge mode runs the program that is currently in
  * the editor against a fixed set of freshly generated mazes, twenty-five per
- * difficulty, and stops at the first one it fails. That failure is the point
- * of the exercise, so the failing maze can be loaded into the main view and
- * watched.
+ * difficulty, and counts how many it solves. Running all of them shows the
+ * shape of a strategy: a wall follower passes every Easy and Medium maze, some
+ * Hard and Expert ones, and no Plaza at all. The first failure can be loaded
+ * into the main view and watched, since that is where the lesson is.
+ *
+ * The panel stays hidden until the learner first reaches the goal in Python
+ * mode. Before then there is nothing to test, and a panel promising 150 mazes
+ * is one more thing to take in for someone who has not solved one yet.
  *
  * The maze, Python and drawing all stay in maze.js; everything here goes
  * through the globalThis.mazeGame bridge it publishes. The markup is built in
@@ -21,20 +26,22 @@
     "use strict";
 
     /*
-      maxSteps is per maze, and is measured rather than guessed. A solver that
-      remembers where it has been, which is the strategy these difficulties
-      are meant to reward, solves all 25 mazes of every tier. Its worst run
-      costs:
+      maxSteps is per maze, counts only the learner's own lines, and is
+      measured rather than guessed. The memory solver in tests/test_maze_api.py,
+      which is the strategy these difficulties are meant to reward, solves all
+      25 mazes of every tier. Its worst run costs:
 
-          Easy 5,227 · Medium 14,236 · Hard 26,979
-          Expert 44,084 · Plaza 58,371 · Marathon 88,905 executed lines
+          Easy 1,508 · Medium 3,848 · Hard 8,191
+          Expert 12,769 · Plaza 10,055 · Marathon 23,975 lines
 
       Exploring open ground and large mazes costs lines, so one budget for all
       six would fail correct programs on the bigger difficulties and teach
-      exactly the wrong lesson. Each is set to roughly twice its measured
-      worst case, leaving room for a less tidy but still correct program. A
-      program going round in circles never finishes anyway, so a generous
-      budget costs it nothing but a few milliseconds.
+      exactly the wrong lesson. A learner's solver is rarely that tidy: one
+      written during development cost one and a half to three times as much.
+      So each budget sits at several times the measured worst case. A program
+      going round in circles never finishes anyway, so a generous budget costs
+      it nothing but a few milliseconds. The tests read these numbers and fail
+      if the memory solver no longer fits inside them.
     */
     const TIERS = [
         {key: "easy", label: "Easy", maxSteps: 15000},
@@ -60,8 +67,8 @@
 
     /*
       A second safety net, for a program that loops without calling anything.
-      Python itself is fast here, spending only ~60ms on a Marathon maze it
-      solves, so this is generous.
+      Python itself is fast here, spending milliseconds on a maze it solves,
+      so this is generous.
     */
     const CHALLENGE_MAX_SECONDS = 3;
 
@@ -72,6 +79,7 @@
     const state = {
         running: false,
         stopRequested: false,
+        unlocked: false,
         failure: null,
         results: new Map(),
     };
@@ -130,7 +138,8 @@
             "p",
             "challenge-intro",
             `Runs the program in the editor against ${TOTAL_MAZES} freshly ` +
-            "generated mazes and stops at the first one it cannot solve.",
+            "generated mazes, from Easy to Marathon, and counts how many it " +
+            "solves.",
         ));
 
         const actions = createElement("div", "challenge-actions");
@@ -207,7 +216,36 @@
         }
 
         mount.textContent = "";
+        mount.hidden = !state.unlocked;
         mount.appendChild(buildPanel());
+    }
+
+    function unlock() {
+        state.unlocked = true;
+        document.getElementById("challenge-mode").hidden = false;
+    }
+
+    /*
+      The first time a Python program reaches the goal, open the panel and
+      offer to run it straight away. Either answer leaves the panel open.
+    */
+    async function offerChallenge() {
+        const game = globalThis.mazeGame;
+        if (state.unlocked || !game) return;
+        unlock();
+
+        const accepted = await game.showGoalDialog({
+            title: "You reached the goal",
+            text: "Challenge mode is now open at the bottom of the page. It " +
+                `runs your program on ${TOTAL_MAZES} new mazes, from Easy to ` +
+                "Marathon, and counts how many it solves.",
+            action: "Run the challenge",
+        });
+        if (!accepted) return;
+
+        const panel = document.getElementById("challenge-mode");
+        panel.scrollIntoView({behavior: scrollBehavior(), block: "start"});
+        runChallenge();
     }
 
     function setStatus(message, isError) {
@@ -255,9 +293,8 @@
             const moves = average(solved.map(result => result.moves));
             text += ` · ${moves} moves on average (${parFor(results).toFixed(1)}× par)`;
         }
-        if (solved.length < results.length) {
-            text += ` · failed on maze ${results[results.length - 1].seed}`;
-        }
+        const firstFailure = results.find(result => !result.reached);
+        if (firstFailure) text += ` · first failed on maze ${firstFailure.seed}`;
         return text;
     }
 
@@ -316,11 +353,12 @@
         );
     }
 
-    function showFailure(tier, result) {
+    function showFailure(tier, result, watchable) {
         state.failure = result;
         elements.failureTitle.textContent =
             `${tier.label} maze ${result.seed} was not solved`;
         elements.failureText.textContent = describeFailure(result);
+        elements.loadButton.hidden = !watchable;
         elements.failure.hidden = false;
         elements.failure.scrollIntoView({block: "nearest"});
     }
@@ -377,7 +415,9 @@
       one maze per frame so the squares can be seen filling in. A hidden page
       never runs animation frames at all, so it yields through a message
       channel instead: there is nothing to draw, and a pupil who switches tabs
-      must not come back to a run that has stalled.
+      must not come back to a run that has stalled. The timer is the last
+      resort for a page that is visible but still not drawing, such as a
+      window covered by another, which would otherwise wait forever.
     */
     function nextPaint() {
         return new Promise(resolve => {
@@ -395,6 +435,7 @@
             }
 
             requestAnimationFrame(finish);
+            setTimeout(finish, 100);
 
             if (document.hidden) {
                 yieldToEventLoop(finish);
@@ -434,6 +475,7 @@
         game.setStatus("Running the challenge…");
 
         let failed = null;
+        let cannotStart = false;
 
         try {
             await game.ready();
@@ -445,7 +487,7 @@
                 state.results.set(tier.key, results);
 
                 for (const seed of SEEDS) {
-                    if (state.stopRequested) break;
+                    if (state.stopRequested || cannotStart) break;
 
                     setStatus(
                         `Running ${tier.label} maze ${seed} of ${SEEDS.length}…`,
@@ -475,23 +517,26 @@
                     updateTier(tier);
                     updateSummary();
 
-                    if (!result.reached) {
-                        failed = {tier, result};
-                        break;
-                    }
+                    if (!result.reached && !failed) failed = {tier, result};
+
+                    // A program that cannot even be read fails every maze
+                    // the same way, so 150 crosses would add nothing.
+                    cannotStart = /^(SyntaxError|IndentationError|TabError)/
+                        .test(result.error);
                 }
 
-                /* Stop the whole run at the first failure, as designed. */
-                if (failed || state.stopRequested) break;
+                if (state.stopRequested || cannotStart) break;
             }
 
-            if (failed) {
-                setStatus(
-                    `Stopped at ${failed.tier.label} maze ${failed.result.seed}.`,
-                );
-                showFailure(failed.tier, failed.result);
-            } else if (state.stopRequested) {
+            // A program that cannot be read does nothing worth watching.
+            if (failed) showFailure(failed.tier, failed.result, !cannotStart);
+
+            if (state.stopRequested) {
                 setStatus("Challenge stopped.");
+            } else if (cannotStart) {
+                setStatus("Your program has an error, so no maze could be run.");
+            } else if (failed) {
+                setStatus("Finished. Load the first unsolved maze to watch it.");
             } else {
                 setStatus(
                     `All ${TOTAL_MAZES} mazes solved. Your program is not ` +
@@ -505,7 +550,9 @@
             elements.startButton.disabled = false;
             elements.stopButton.hidden = true;
             game.setBusy(false);
-            game.setStatus(failed ? "Load the failing maze to watch it." : "");
+            game.setStatus(
+                failed && !cannotStart ? "Load the failing maze to watch it." : "",
+            );
         }
     }
 
@@ -544,9 +591,14 @@
                 setStatus(`Challenge mode is unavailable: ${error.message}`, true);
             });
 
+        document.addEventListener("maze:goal-reached", event => {
+            if (event.detail.mode === "python") offerChallenge();
+        });
+
         /* A small hook for the console and for automated checks. */
         globalThis.challengeMode = {
             run: runChallenge,
+            unlock,
             stop: () => {
                 state.stopRequested = true;
             },

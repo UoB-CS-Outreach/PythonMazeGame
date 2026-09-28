@@ -257,12 +257,22 @@ requestAnimationFrame(refitMaze);
 */
 let visRow, visCol, visDir;
 
-/* Queue of actions emitted by Python, e.g. "move", "turnLeft", "turnRight". */
+/*
+  Everything a run produces, in the order the program produced it: moves and
+  turns to animate, lines it printed, and in blocks mode the block that was
+  about to run. Playing back one queue keeps the three in step, so a print()
+  appears when the triangle gets there rather than before it has moved.
+*/
 let actionQueue = [];
+const MOVEMENT = new Set(["move", "turnLeft", "turnRight"]);
 
-/* lets Python add an action that JS will animate later. */
+/* Lets Python add an action that JS will play back later. */
 globalThis.js_enqueue_action = function (type) {
-    actionQueue.push({type});
+    if (type.startsWith("highlight:")) {
+        actionQueue.push({type: "highlight", id: type.slice("highlight:".length)});
+    } else {
+        actionQueue.push({type});
+    }
 };
 
 /* Draw the triangular player marker in the current cell. */
@@ -359,14 +369,90 @@ function resetVisualState() {
     visCol = startCol;
     visDir = 1;
     actionQueue = [];
+    hideMazeNotice();
     drawMaze();
+}
+
+/*
+  Printed output. While a program runs, each line joins the action queue and
+  is shown when the animation reaches it. Anything printed outside a run is
+  collected and written in one go. Writing each line straight into the text
+  area cost the browser a layout per line: a loop that printed froze the page
+  until the five-second limit cut it off. The cap keeps the panel readable
+  when a loop prints thousands of lines.
+*/
+const MAX_OUTPUT_LINES = 1000;
+let collectingRunOutput = false;
+let pendingOutput = "";
+let outputLines = 0;
+let hiddenOutputLines = 0;
+let outputFlushScheduled = false;
+
+function writePythonOutput(message) {
+    let text = message.replace(/\r/g, "");
+    if (!text.endsWith("\n")) text += "\n";
+
+    if (outputLines >= MAX_OUTPUT_LINES) {
+        hiddenOutputLines++;
+        return;
+    }
+    outputLines++;
+
+    if (collectingRunOutput) {
+        actionQueue.push({type: "output", text});
+        return;
+    }
+
+    pendingOutput += text;
+    if (!outputFlushScheduled) {
+        outputFlushScheduled = true;
+        setTimeout(flushOutput, 0);
+    }
+}
+
+/* Add text to the end of the Output panel and keep it scrolled down. */
+function writeOutputText(text) {
+    const output = document.getElementById("output");
+    output.value += text;
+    output.scrollTop = output.scrollHeight;
+}
+
+function flushOutput() {
+    outputFlushScheduled = false;
+    if (!pendingOutput) return;
+
+    writeOutputText(pendingOutput);
+    pendingOutput = "";
+}
+
+function clearOutput() {
+    pendingOutput = "";
+    outputLines = 0;
+    hiddenOutputLines = 0;
+    document.getElementById("output").value = "";
 }
 
 /* Append a line of text to the output text area. */
 function appendOutput(text) {
-    const output = document.getElementById("output");
-    output.value += text + "\n";
-    output.scrollTop = output.scrollHeight;
+    flushOutput();
+    writeOutputText(text + "\n");
+}
+
+/*
+  A short explanation laid over the maze, at the top or the bottom, whichever
+  is further from avoidRow: the notice is about what the triangle is doing,
+  so it must not sit on top of the triangle doing it.
+*/
+function showMazeNotice(title, text, avoidRow) {
+    const notice = document.getElementById("mazeNotice");
+    document.getElementById("mazeNoticeTitle").textContent = title;
+    document.getElementById("mazeNoticeText").textContent = text;
+    notice.dataset.place = avoidRow < numRows / 2 ? "bottom" : "top";
+    notice.hidden = false;
+}
+
+function hideMazeNotice() {
+    document.getElementById("mazeNotice").hidden = true;
 }
 
 /* Simple async sleep function for the animation loop. */
@@ -381,43 +467,209 @@ function stepForward(row, col, dir) {
 }
 
 /*
-  Animate all actions currently in the queue.
+  A program stopped for running too long has almost always spent most of its
+  run going round one loop, and replaying every recorded action took up to
+  half an hour at the default speed. So the replay shows the way into
+  the loop and a few laps of it, at least two and at least three seconds'
+  worth so a quick spin still registers, then stops at the end of a lap.
+*/
+const MIN_LOOP_LAPS = 2;
+const MIN_LOOP_MS = 3000;
+
+/*
+  With no loop to show, this many moves and turns are enough to see what it
+  did: about ten seconds at the default speed.
+*/
+const STUCK_REPLAY_WITHOUT_LOOP = 400;
+
+/*
+  Where the triangle starts repeating itself, as {start, period} counted in
+  queue entries plus the average row of one lap, or null. Only the triangle's
+  square and facing are compared, not the program's variables, but a program
+  that was stopped for running too long and has made the same moves for its
+  last three laps is not about to do anything else.
+*/
+function findRepeatingTail(actions) {
+    const count = actions.length;
+    const poses = new Int32Array(count + 1);
+    let row = startRow;
+    let col = startCol;
+    let dir = 1;
+    poses[0] = (row * numCols + col) * 4 + dir;
+
+    for (let index = 0; index < count; index++) {
+        const type = actions[index];
+        if (type === "move") {
+            [row, col] = stepForward(row, col, dir);
+        } else if (type === "turnLeft") {
+            dir = (dir + 3) % 4;
+        } else if (type === "turnRight") {
+            dir = (dir + 1) % 4;
+        }
+        poses[index + 1] = (row * numCols + col) * 4 + dir;
+    }
+
+    // Try the shortest laps first. Comparing from the end means a wrong
+    // length usually fails within a comparison or two.
+    for (let period = 1; period * 3 <= count; period++) {
+        let matching = 0;
+        while (
+            matching < period * 2 &&
+            poses[count - matching] === poses[count - matching - period]
+        ) {
+            matching++;
+        }
+        if (matching < period * 2) continue;
+
+        // Three laps agree, so walk back to where the repeating began.
+        while (
+            count - matching >= period &&
+            poses[count - matching] === poses[count - matching - period]
+        ) {
+            matching++;
+        }
+        const start = count - matching + 1 - period;
+
+        let rowTotal = 0;
+        for (let index = start; index < start + period; index++) {
+            rowTotal += Math.floor(poses[index] / 4 / numCols);
+        }
+        return {start, period, meanRow: rowTotal / period};
+    }
+    return null;
+}
+
+/*
+  What to replay of a stuck run, and what to say about it. actions is the
+  type of every queue entry, so printed lines and block highlights are in it
+  too; only moves and turns decide what the triangle was doing.
+*/
+function planStuckReplay(actions) {
+    const loop = findRepeatingTail(actions);
+    const lap = loop ? actions.slice(loop.start, loop.start + loop.period) : [];
+
+    if (lap.some(type => MOVEMENT.has(type))) {
+        const onTheSpot = !lap.includes("move");
+        return {
+            end: actions.length,
+            noticeAt: loop.start,
+            loop,
+            avoidRow: loop.meanRow,
+            title: "Stuck in a loop",
+            text: onTheSpot
+                ? "The triangle keeps turning on the spot, so Python stopped " +
+                  "the program."
+                : "The triangle keeps going round the same route, so Python " +
+                  "stopped the program.",
+        };
+    }
+
+    // Stop after the first few hundred moves and turns.
+    let end = 0;
+    let movements = 0;
+    while (end < actions.length && movements < STUCK_REPLAY_WITHOUT_LOOP) {
+        if (MOVEMENT.has(actions[end])) movements++;
+        end++;
+    }
+
+    return {
+        end,
+        noticeAt: 0,
+        loop: null,
+        avoidRow: startRow,
+        title: "Program stopped",
+        text: movements === 0
+            ? "It ran for too long without moving the triangle, so Python " +
+              "stopped it. Check for a loop that never ends."
+            : "It ran for too long, so Python stopped it. Check for a loop " +
+              "that never ends.",
+    };
+}
+
+/*
+  Play back the queue, or for a stuck run, the part of it that stuckReplay
+  picks out. Moves and turns take time; printed lines and block highlights
+  happen instantly alongside the next move. Returns how far it got, or null
+  if a newer run or a reset cancelled it.
 
   runId is used so that if the user hits "Run" again we can cancel
   the previous animation by checking that runId is still current.
 */
-async function playActions(runId) {
+async function playActions(runId, stuckReplay = null) {
     const speedInput = document.getElementById("speed");
-    const actionCount = actionQueue.length;
+    const actionCount = stuckReplay ? stuckReplay.end : actionQueue.length;
+    const movementCount = actionQueue
+        .slice(0, actionCount)
+        .filter(action => MOVEMENT.has(action.type)).length;
+    const loop = stuckReplay?.loop;
     drawMaze();
 
     let index = 0;
-    while (index < actionCount) {
-        if (runId !== runCounter) return; // cancelled
+    let end = actionCount;
+    let noticeShownAt = null;
+
+    while (index < end) {
+        if (runId !== runCounter) return null; // cancelled
+
+        if (stuckReplay && noticeShownAt === null && index >= stuckReplay.noticeAt) {
+            showMazeNotice(stuckReplay.title, stuckReplay.text, stuckReplay.avoidRow);
+            noticeShownAt = performance.now();
+        }
+
+        // Once enough of the loop has been seen, finish the lap in progress.
+        if (loop && end === actionCount) {
+            const played = index - loop.start;
+            if (
+                played >= loop.period * MIN_LOOP_LAPS &&
+                performance.now() - noticeShownAt >= MIN_LOOP_MS
+            ) {
+                const lapEnd = loop.start + Math.ceil(played / loop.period) * loop.period;
+                end = Math.min(actionCount, lapEnd);
+                if (index >= end) break;
+            }
+        }
 
         // Re-read the slider every frame, so dragging it changes the pace of
         // a run already in progress rather than only the next one.
-        const rate = actionsPerSecond(speedInput, actionCount);
+        const rate = actionsPerSecond(speedInput, movementCount);
         const actionsThisFrame = Math.max(
             1,
             Math.round(rate / MAX_FRAMES_PER_SECOND),
         );
 
-        for (let step = 0; step < actionsThisFrame && index < actionCount; step++) {
+        let printed = "";
+        let highlight = null;
+        for (let step = 0; step < actionsThisFrame && index < end; index++) {
             const action = actionQueue[index];
             if (action.type === "move") {
                 [visRow, visCol] = stepForward(visRow, visCol, visDir);
+                step++;
             } else if (action.type === "turnLeft") {
                 visDir = (visDir + 3) % 4;
+                step++;
             } else if (action.type === "turnRight") {
                 visDir = (visDir + 1) % 4;
+                step++;
+            } else if (action.type === "output") {
+                printed += action.text;
+            } else if (action.type === "highlight") {
+                highlight = action.id;
             }
-            index++;
         }
 
+        // One write per frame, however many lines a loop printed in it.
+        if (printed) writeOutputText(printed);
+        if (highlight !== null) globalThis.mazeBlocks?.highlight(highlight);
         drawMaze();
         await sleep((1000 * actionsThisFrame) / rate);
     }
+
+    // A program that never moved has nothing to replay, but still needs the
+    // explanation.
+    if (stuckReplay && noticeShownAt === null) {
+        showMazeNotice(stuckReplay.title, stuckReplay.text, stuckReplay.avoidRow);
+    }
+    return index;
 }
 
 let pyodide;
@@ -464,30 +716,9 @@ function actionsPerSecond(speedInput, actionCount) {
 const pyodideReadyPromise = (async () => {
     pyodide = await loadPyodide();
 
-    const outputEl = document.getElementById("output");
-
     // Send Python's stdout and stderr into the output text area
-    pyodide.setStdout({
-      batched: (msg) => {
-        // normalise Windows newlines just in case
-        msg = msg.replace(/\r/g, "");
-
-        outputEl.value += msg;
-        if (msg.length && !msg.endsWith("\n")) outputEl.value += "\n";
-
-        outputEl.scrollTop = outputEl.scrollHeight;
-      }
-    });
-    pyodide.setStderr({
-      batched: (msg) => {
-        msg = msg.replace(/\r/g, "");
-
-        outputEl.value += msg;
-        if (msg.length && !msg.endsWith("\n")) outputEl.value += "\n";
-
-        outputEl.scrollTop = outputEl.scrollHeight;
-      }
-    });
+    pyodide.setStdout({batched: writePythonOutput});
+    pyodide.setStderr({batched: writePythonOutput});
 
     // Load the Python game API and generator into the interpreter.
     const [apiResponse, generatorResponse] = await Promise.all([
@@ -501,8 +732,13 @@ const pyodideReadyPromise = (async () => {
         throw new Error(`Failed to load maze_generator.py: ${generatorResponse.status}`);
     }
 
-    const apiCode = await apiResponse.text();
-    await pyodide.runPythonAsync(apiCode);
+    // Compiled under its own file name rather than Pyodide's default "<exec>",
+    // which it would otherwise share with the learner's program: tracebacks
+    // and the step counter both tell the two apart by file name.
+    pyodide.globals.set("PMG_API_SOURCE", await apiResponse.text());
+    await pyodide.runPythonAsync(
+        'exec(compile(PMG_API_SOURCE, "maze.py", "exec"), globals())',
+    );
 
     const generatorCode = await generatorResponse.text();
     pyodide.globals.set("PMG_GENERATOR_SOURCE", generatorCode);
@@ -565,7 +801,7 @@ async function activateMaze(nextMaze, level) {
     runCounter++;
     updateMazeGeometry();
     resetVisualState();
-    document.getElementById("output").value = "";
+    clearOutput();
     await pyodide.runPythonAsync("_sync_maze_from_js()");
 
     setMazeStatus("");
@@ -636,13 +872,41 @@ PMG_MAZE_GENERATOR.maze_to_text(
     }
 }
 
+/*
+  Blocks mode reports the last line of an error in plain words. A traceback
+  of generated Python means nothing to someone who never saw the Python,
+  and the block that failed stays highlighted to show where it went wrong.
+*/
+function describeErrorForBlocks(error) {
+    const lastLine = error.trim().split("\n").pop();
+    if (/^RuntimeError: (Wall ahead|Can't move)/.test(lastLine)) {
+        return "The triangle walked into a wall. The highlighted block is the " +
+            "move that hit it.";
+    }
+    if (lastLine.startsWith("StepLimitError")) {
+        return "The blocks were still running after a long time, so Python " +
+            "stopped them.";
+    }
+    return lastLine;
+}
+
 async function runProgram() {
     // Wait for Pyodide and maze.py to be ready
     await pyodideReadyPromise;
 
-    const code = document.getElementById("code").value;
-    const outputEl = document.getElementById("output");
-    outputEl.value = "";
+    /*
+      Blocks mode runs a version of its Python that marks each block as it
+      starts, and reports the plain version, which is what the learner gets
+      if they convert their blocks.
+    */
+    const blocksMode = programMode === "blocks";
+    const blocks = blocksMode ? globalThis.mazeBlocks : null;
+    const code = blocksMode
+        ? (blocks?.python() ?? "")
+        : document.getElementById("code").value;
+    const runnableCode = blocks ? blocks.python({highlight: true}) : code;
+    clearOutput();
+    blocks?.clearHighlight();
 
     // Increment runCounter so any previous animation loops stop
     runCounter++;
@@ -665,33 +929,59 @@ async function runProgram() {
     }
 
     // Run the user's Python program
+    let result;
     try {
         /*
           The budget exists to stop infinite loops, not to cap how big a maze
-          may be. A solver that remembers where it has been was measured at up
-          to 88,905 executed lines on a Marathon maze, and Python spends only
-          ~60ms on that, so the limit sits well clear of it. A program going
-          round in circles still hits the limit in a fraction of a second;
-          what the learner then waits for is the animation, which is capped
-          separately.
+          may be. The memory solver in tests/ runs at most 23,975 lines of its
+          own on a Marathon maze, and Python spends only milliseconds on that,
+          so the limit sits well clear of it. A program going round in
+          circles still hits the limit in a fraction of a second, and its
+          replay is cut short by planStuckReplay().
         */
-        pyodide.globals.set("PMG_SRC", code);
+        pyodide.globals.set("PMG_SRC", runnableCode);
         pyodide.globals.set("PMG_MAX_SECONDS", 5);
         pyodide.globals.set("PMG_MAX_STEPS", 250000);
 
-        await pyodide.runPythonAsync("run_user_code(PMG_SRC, PMG_MAX_SECONDS, PMG_MAX_STEPS)");
+        collectingRunOutput = true;
+        result = JSON.parse(String(await pyodide.runPythonAsync(
+            "run_program(PMG_SRC, PMG_MAX_SECONDS, PMG_MAX_STEPS)",
+        )));
     } catch (err) {
-        hadError = true;
-        appendOutput(formatPyodideError(err));
+        // Only the game itself failing ends up here. Errors in the learner's
+        // program come back in the result, already trimmed to their code.
+        result = {error: formatPyodideError(err), stuck: false};
+    } finally {
+        collectingRunOutput = false;
     }
+    if (result.error) hadError = true;
 
     const actionTypes = actionQueue.map(action => action.type);
+    const movementTypes = actionTypes.filter(type => MOVEMENT.has(type));
 
     // Animate the recorded actions
-    await playActions(thisRun);
+    const playedTo = await playActions(
+        thisRun,
+        result.stuck ? planStuckReplay(actionTypes) : null,
+    );
 
     // A newer run or reset has replaced this one.
     if (thisRun !== runCounter) return;
+
+    // A stuck run's replay stops early, and the lines it did not reach were
+    // never shown either.
+    const unshownLines = hiddenOutputLines + actionQueue
+        .slice(playedTo)
+        .filter(action => action.type === "output").length;
+    if (unshownLines > 0) {
+        appendOutput(`(${unshownLines.toLocaleString()} more printed lines not shown)`);
+    }
+    // The error arrives when the triangle does, not before it has moved.
+    if (result.error) {
+        appendOutput(blocksMode ? describeErrorForBlocks(result.error) : result.error);
+    } else {
+        blocks?.clearHighlight();
+    }
 
     // Ask Python whether the player reached the goal
     let reached = false;
@@ -703,12 +993,14 @@ async function runProgram() {
     }
 
     if (reached) {
-        const moves = actionTypes.filter(type => type === "move").length;
+        const moves = movementTypes.filter(type => type === "move").length;
         appendOutput(
             `Reached the goal in ${moves} moves. ` +
             `The shortest route is ${shortestRoute}.`,
         );
-    } else if (!hadError) {
+    } else if (!hadError && !tutorialAnimationActive) {
+        // Tutorial examples stop short of the goal on purpose, and the
+        // tutorial card already says whether the run did what it asked.
         appendOutput("Program finished without reaching goal.");
     }
 
@@ -718,11 +1010,56 @@ async function runProgram() {
             runId: thisRun,
             reached,
             hadError,
-            actions: actionTypes
+            stuck: result.stuck,
+            actions: movementTypes,
+            code,
+            mode: programMode,
         }
     }));
 
-    if (reached) await celebrateGoal(thisRun);
+    if (!reached) return;
+    await celebrateGoal(thisRun);
+
+    // After the celebration, so anything offered next does not cover it.
+    if (thisRun === runCounter) {
+        document.dispatchEvent(new CustomEvent("maze:goal-reached", {
+            detail: {mode: programMode},
+        }));
+    }
+}
+
+/*
+  The small window offered after reaching the goal, with one suggested next
+  step. Resolves true if the learner takes it.
+*/
+function showGoalDialog({title, text, action}) {
+    const dialog = document.getElementById("goalDialog");
+    if (dialog.open) return Promise.resolve(false);
+
+    document.getElementById("goalDialogTitle").textContent = title;
+    document.getElementById("goalDialogText").textContent = text;
+    const actionButton = document.getElementById("goalDialogAction");
+    const laterButton = document.getElementById("goalDialogLater");
+    actionButton.textContent = action;
+
+    return new Promise(resolve => {
+        function finish(accepted) {
+            actionButton.onclick = null;
+            laterButton.onclick = null;
+            dialog.oncancel = null;
+            dialog.close();
+            resolve(accepted);
+        }
+
+        actionButton.onclick = () => finish(true);
+        laterButton.onclick = () => finish(false);
+        dialog.oncancel = event => {
+            event.preventDefault();
+            finish(false);
+        };
+        dialog.showModal();
+        actionButton.focus();
+    });
 }
 
 function formatPyodideError(err) {
@@ -763,31 +1100,74 @@ document.getElementById("runBtn").addEventListener("click", () => {
 // Reset button clears output and resets both JS and Python state
 document.getElementById("resetBtn").addEventListener("click", () => {
     runCounter++;
-    document.getElementById("output").value = "";
+    clearOutput();
     resetVisualState();
+    globalThis.mazeBlocks?.clearHighlight();
     pyodideReadyPromise.then(() => pyodide.runPythonAsync("reset_state()"));
 });
 
 /*
-  Sample button loads the worked solver. Replacing work in progress needs a
-  confirmation, but an empty or untouched editor does not, and a browser
-  confirm() dialog in the middle of a short activity is worth avoiding.
+  Blocks or Python. The mode lives on <html data-mode>, so the stylesheet
+  shows one editor and hides the other, and other scripts hear about a change
+  through a "maze:mode" event. Both programs are kept when switching, and the
+  maze stays as it is: the mazes are the same in both modes.
 */
-document.getElementById("sampleBtn").addEventListener("click", async () => {
+let programMode = document.documentElement.dataset.mode === "blocks"
+    ? "blocks"
+    : "python";
+
+function showProgramMode() {
+    document.documentElement.dataset.mode = programMode;
+    document.querySelectorAll("#modeSwitch [data-mode]").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.mode === programMode));
+    });
+}
+
+function setProgramMode(mode) {
+    if (mode !== "blocks" && mode !== "python") return;
+    if (mode === programMode) return;
+
+    programMode = mode;
+    showProgramMode();
+
+    // A different program is now in charge, so stop the old one's animation.
+    runCounter++;
+    clearOutput();
+    resetVisualState();
+    document.dispatchEvent(new CustomEvent("maze:mode", {detail: {mode}}));
+}
+
+showProgramMode();
+document.querySelectorAll("#modeSwitch [data-mode]").forEach(button => {
+    button.addEventListener("click", () => setProgramMode(button.dataset.mode));
+});
+
+/*
+  Put a whole program into the Python editor, for Load sample and for
+  converting blocks. Replacing work in progress needs a confirmation, but an
+  empty or untouched editor does not, and a browser confirm() dialog in the
+  middle of a short activity is worth avoiding. Returns whether it replaced.
+*/
+function replaceEditorProgram(text, question) {
     const code = document.getElementById("code");
     const written = code.value.trim();
-    const untouched = written === "" || written === "# Enter your python code here";
+    const untouched = written === "" ||
+        written === "# Enter your python code here" ||
+        written === text.trim();
 
-    if (!untouched && !window.confirm(
-        "Replace your code with the sample solver?"
-    )) {
-        return;
-    }
+    if (!untouched && !window.confirm(question)) return false;
 
-    const response = await fetch("samples/default.txt");
-    code.value = await response.text();
+    code.value = text;
     code.dispatchEvent(new Event("input")); // refresh line numbers
-    code.focus();
+    return true;
+}
+
+document.getElementById("sampleBtn").addEventListener("click", async () => {
+    const response = await fetch("samples/default.txt");
+    const sample = await response.text();
+    if (replaceEditorProgram(sample, "Replace your code with the sample solver?")) {
+        document.getElementById("code").focus();
+    }
 });
 
 document.getElementById("mazeSelect").addEventListener("change", event => {
@@ -799,9 +1179,11 @@ document.getElementById("generateMazeBtn").addEventListener("click", () => {
 });
 
 // Tutorials always use the known fixed maze. It stays loaded afterward so the
-// learner can choose when and how to move on to another maze.
-document.addEventListener("tutorial:start", () => {
+// learner can choose when and how to move on to another maze. Each tutorial
+// also belongs to one mode, blocks or Python.
+document.addEventListener("tutorial:start", event => {
     tutorialAnimationActive = true;
+    setProgramMode(event.detail?.programMode || "python");
     if (currentMazeLevel !== "tutorial") loadPresetMaze("tutorial");
 });
 
@@ -852,6 +1234,16 @@ globalThis.mazeGame = {
     /* The current contents of the Python editor. */
     getCode: () => document.getElementById("code").value,
 
+    /* Replace the Python editor's contents, asking first if it holds work. */
+    replaceCode: replaceEditorProgram,
+
+    /* "blocks" or "python", and switching between them. */
+    getMode: () => programMode,
+    setMode: setProgramMode,
+
+    /* Offer one next step after the goal; resolves true if it is taken. */
+    showGoalDialog,
+
     /* Status line under the maze controls. */
     setStatus: (message, isError = false) => setMazeStatus(message, isError),
 };
@@ -888,48 +1280,103 @@ function initHelpTabs() {
 initHelpTabs();
 
 
-function initTabIndent(textarea) {
-    textarea.addEventListener("keydown", (e) => {
-        if (e.key !== "Tab") return;
+/*
+  Replace part of the editor's text through the browser's own editing command
+  where it exists, so Ctrl+Z still undoes it. Assigning textarea.value wipes
+  the undo history, and a learner who has just mangled their program needs
+  that history more than anyone.
+*/
+function replaceEditorText(textarea, start, end, text) {
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
 
-        e.preventDefault();
+    let done = false;
+    try {
+        done = text
+            ? document.execCommand("insertText", false, text)
+            : document.execCommand("delete");
+    } catch {
+        done = false;
+    }
+
+    if (!done) {
+        textarea.setRangeText(text, start, end, "end");
+        textarea.dispatchEvent(new Event("input"));
+    }
+}
+
+const INDENT = "    ";
+
+/*
+  Indentation is the part of Python that newcomers find hardest to type, and
+  the tutorial's last step asks for exactly that: a loop with the rule
+  indented inside it. So the editor behaves like a Python editor. Enter keeps
+  the current indentation and adds a level after a colon, Backspace in the
+  indentation removes a whole level, and Tab and Shift+Tab indent or unindent
+  every selected line.
+*/
+function initIndentKeys(textarea) {
+    textarea.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
 
         const value = textarea.value;
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const indent = "    ";
-
         const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-        const lineEnd = value.indexOf("\n", end);
-        const selEnd = (lineEnd === -1) ? value.length : lineEnd;
+        const beforeCaret = value.slice(lineStart, start);
 
-        const selectedBlock = value.slice(lineStart, selEnd);
-        const lines = selectedBlock.split("\n");
-
-        // Indent or unindent each line
-        if (!e.shiftKey) {
-            const newBlock = lines.map(l => indent + l).join("\n");
-            textarea.value = value.slice(0, lineStart) + newBlock + value.slice(selEnd);
-
-            textarea.selectionStart = start + indent.length;
-            textarea.selectionEnd = end + indent.length * lines.length;
-        } else {
-            const newLines = lines.map(l => l.startsWith(indent) ? l.slice(indent.length)
-                : l.startsWith(" ") ? l.replace(/^ {1,4}/, "")
-                    : l);
-            const newBlock = newLines.join("\n");
-            textarea.value = value.slice(0, lineStart) + newBlock + value.slice(selEnd);
-
-            textarea.selectionStart = Math.max(lineStart, start - 4);
-            textarea.selectionEnd = Math.max(lineStart, end - 4 * lines.length);
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            let indent = beforeCaret.match(/^[ \t]*/)[0];
+            // A comment can end in a colon too, so look at the code only.
+            if (beforeCaret.replace(/#.*$/, "").trimEnd().endsWith(":")) {
+                indent += INDENT;
+            }
+            replaceEditorText(textarea, start, end, "\n" + indent);
+            return;
         }
 
-        textarea.dispatchEvent(new Event("input"));
+        if (e.key === "Backspace" && !e.shiftKey && start === end && /^ +$/.test(beforeCaret)) {
+            e.preventDefault();
+            // Back to the previous multiple of four, not always four.
+            const remove = ((beforeCaret.length - 1) % INDENT.length) + 1;
+            replaceEditorText(textarea, start - remove, start, "");
+            return;
+        }
+
+        if (e.key !== "Tab") return;
+        e.preventDefault();
+
+        const lineEnd = value.indexOf("\n", end);
+        const blockEnd = (lineEnd === -1) ? value.length : lineEnd;
+        const lines = value.slice(lineStart, blockEnd).split("\n");
+
+        if (!e.shiftKey) {
+            replaceEditorText(
+                textarea, lineStart, blockEnd,
+                lines.map(line => INDENT + line).join("\n"),
+            );
+            textarea.setSelectionRange(
+                start + INDENT.length,
+                end + INDENT.length * lines.length,
+            );
+        } else {
+            const removed = lines.map(line => line.match(/^ {0,4}/)[0].length);
+            replaceEditorText(
+                textarea, lineStart, blockEnd,
+                lines.map((line, index) => line.slice(removed[index])).join("\n"),
+            );
+            const totalRemoved = removed.reduce((sum, count) => sum + count, 0);
+            textarea.setSelectionRange(
+                Math.max(lineStart, start - removed[0]),
+                Math.max(lineStart, end - totalRemoved),
+            );
+        }
     });
 }
 
 const codeBox = document.getElementById("code");
-initTabIndent(codeBox);
+initIndentKeys(codeBox);
 
 function initLineNumbers(textarea, gutter) {
     function update() {

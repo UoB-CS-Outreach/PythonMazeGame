@@ -13,7 +13,6 @@ from maze_generator import (
     validate_maze,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 # 0 = up, 1 = right, 2 = down, 3 = left, matching maze.py.
@@ -334,9 +333,9 @@ class TaughtStrategyTests(unittest.TestCase):
                 self.assertFalse(solve_with_rule(maze, FORWARD_FIRST_RULE))
 
     def test_the_challenge_seed_set_defeats_the_taught_solver(self):
-        # Challenge mode runs seeds 1-25 of each level in order and stops at
-        # the first failure. It has to actually stop somewhere, or it teaches
-        # that wall following is good enough.
+        # Challenge mode runs seeds 1-25 of each level. The wall follower has
+        # to fail some of them by Hard, or the challenge teaches that wall
+        # following is good enough.
         challenge_seeds = range(1, 26)
         for level in ("easy", "medium"):
             for seed in challenge_seeds:

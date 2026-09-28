@@ -43,7 +43,6 @@ from collections import deque
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-
 Coordinate = Tuple[int, int]
 Grid = List[List[str]]
 Maze = List[str]
@@ -710,7 +709,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.output:
         write_maze(maze, args.output)
     else:
-        print(maze_to_text(maze), end="")
+        print(maze_to_text(maze), end="")  # noqa: T201 - printing is the CLI's job
     return 0
 
 

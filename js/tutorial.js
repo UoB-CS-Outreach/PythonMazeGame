@@ -7,9 +7,206 @@
 
 const RIGHT_HAND_ROUND = "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()";
 
+/*
+  The "New to coding" examples. Each one appears on two cards: the card that
+  explains it puts it in the editor, so the code being described is the code
+  on screen, and the card that asks for a run offers it again in case the
+  learner has edited it into something that no longer works.
+*/
+const THREE_MOVES = "move()\nmove()\nmove()";
+const TURN_AND_MOVE = "# Turn right, then move twice\nturn_right()\nmove()\nmove()\nprint(\"Done\")";
+const FIRST_DECISION = "if path_ahead():\n    move()\nelse:\n    turn_right()";
+const FIRST_LOOP = "while path_ahead():\n    move()";
+
+/*
+  The blocks examples, in the short form blocks.js reads: "move" and the
+  turns are single blocks, and {if, do, else} and {while, do} have gaps. The
+  right-hand rule needs an if inside the else of another if.
+*/
+const TWO_MOVE_BLOCKS = ["move", "move"];
+const TURN_BLOCKS = ["turn_right", "move", "move"];
+const DECISION_BLOCKS = [{if: "ahead", do: ["move"], else: ["turn_right"]}];
+const LOOP_BLOCKS = [{while: "ahead", do: ["move"]}];
+const RIGHT_HAND_BLOCKS = [{
+    if: "right",
+    do: ["turn_right", "move"],
+    else: [{if: "ahead", do: ["move"], else: ["turn_left"]}],
+}];
+
 const tutorialDefinitions = {
+    blocks: {
+        label: "Blocks",
+        programMode: "blocks",
+        steps: [
+            {
+                target: "#mazeCanvas",
+                title: "This is the maze",
+                body: `
+                    <p>The blue triangle starts here, facing right. The green square
+                    is where it has to end up.</p>
+                    <p>You will not steer it by hand. You will give it instructions,
+                    and the computer will follow them exactly.</p>
+                `,
+            },
+            {
+                target: "#blocksEditor",
+                title: "Instructions go here",
+                body: `
+                    <p>Each block is one instruction. The computer runs them from the
+                    top, starting under <strong>when Run is pressed</strong>.</p>
+                    <p>Two <strong>move forward</strong> blocks are there
+                    already.</p>
+                `,
+                blocks: TWO_MOVE_BLOCKS,
+                autoInsert: true,
+            },
+            {
+                target: "#runBtn",
+                title: "Now run it",
+                alsoHighlight: ["#blocksEditor"],
+                body: `
+                    <p>Press <strong>Run program</strong> and watch the triangle move
+                    two squares. Each block lights up as it runs.</p>
+                    <p>If the button is greyed out, the program is still starting
+                    up. It takes a few seconds the first time.</p>
+                `,
+                blocks: TWO_MOVE_BLOCKS,
+                requiresRun: true,
+                validate: result => !result.hadError && countActions(result, "move") >= 1,
+                failure: "The triangle did not move. Press Replace blocks with example, then Run program.",
+            },
+            {
+                /*
+                  Dragging and running are separate cards on purpose: a card
+                  that also points at the Run button is placed so that it
+                  covers the list of blocks it asks the learner to drag from.
+                */
+                target: "#blocksEditor",
+                title: "Add a turn",
+                body: `
+                    <p>Drag a <strong>turn right</strong> block out of the list on
+                    the left. Drop it just under <strong>when Run is
+                    pressed</strong>, above the moves.</p>
+                    <p>To get rid of a block, drag it back into the list.</p>
+                `,
+                blocks: TURN_BLOCKS,
+            },
+            {
+                target: "#runBtn",
+                title: "Run the turn",
+                alsoHighlight: ["#blocksEditor"],
+                body: `
+                    <p>Press <strong>Run program</strong>. The triangle turns on the
+                    spot, then moves down two squares.</p>
+                `,
+                blocks: TURN_BLOCKS,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    result.actions[0] === "turnRight" &&
+                    countActions(result, "move") >= 2
+                ),
+                failure: "That did not turn first and then move. Put turn right at the top, or press Replace blocks with example.",
+            },
+            {
+                target: "#blocksEditor",
+                title: "Ask the maze a question",
+                body: `
+                    <p>The purple <strong>if</strong> block checks whether a path is
+                    open. If it is, the blocks in its first gap run. If not, the
+                    blocks under <strong>else</strong> run.</p>
+                    <p>Only one of the two gaps ever runs.</p>
+                `,
+                blocks: DECISION_BLOCKS,
+                autoInsert: true,
+            },
+            {
+                target: "#runBtn",
+                title: "Run the decision",
+                alsoHighlight: ["#blocksEditor"],
+                body: `
+                    <p>The way ahead is open, so the triangle moves forward.</p>
+                `,
+                blocks: DECISION_BLOCKS,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    usesWord(result, "if") &&
+                    countActions(result, "move") >= 1
+                ),
+                failure: "That was not the if example. Press Replace blocks with example, then Run program.",
+            },
+            {
+                target: "#blocksEditor",
+                title: "Repeat",
+                body: `
+                    <p>The green <strong>repeat while</strong> block runs the blocks
+                    inside it again and again, for as long as its path stays
+                    open.</p>
+                    <p>One block inside it can make many moves.</p>
+                `,
+                blocks: LOOP_BLOCKS,
+                autoInsert: true,
+            },
+            {
+                target: "#runBtn",
+                title: "Run the loop",
+                alsoHighlight: ["#blocksEditor"],
+                body: `
+                    <p>Press <strong>Run program</strong>. The triangle runs down the
+                    corridor and stops itself at the wall.</p>
+                `,
+                blocks: LOOP_BLOCKS,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    usesWord(result, "while") &&
+                    countActions(result, "move") >= 3
+                ),
+                failure: "That was not the repeat example reaching the wall. Press Replace blocks with example, then Run program.",
+            },
+            {
+                target: "#runBtn",
+                title: "Keep one hand on the wall",
+                alsoHighlight: ["#blocksEditor"],
+                body: `
+                    <p>A rule that works in a real maze: <strong>turn right if you
+                    can; otherwise go straight; otherwise turn left.</strong></p>
+                    <p>That is an if inside the else of another if. Run one
+                    round.</p>
+                `,
+                blocks: RIGHT_HAND_BLOCKS,
+                autoInsert: true,
+                requiresRun: true,
+                validate: result => (
+                    !result.hadError &&
+                    result.actions.includes("turnRight") &&
+                    countActions(result, "move") >= 1
+                ),
+                failure: "Expected a right turn and a move. Press Replace blocks with example, then Run program.",
+            },
+            {
+                // Pointing at Run keeps the card off both the maze and the
+                // list of blocks, which the learner needs next.
+                target: "#runBtn",
+                alsoHighlight: ["#blocksEditor"],
+                title: "Over to you",
+                body: `
+                    <p>The rule chooses one step. To reach the goal it has to
+                    repeat.</p>
+                    <p>Drag a <strong>repeat until at goal</strong> block to just
+                    under <strong>when Run is pressed</strong>. Then drag the top
+                    <strong>if</strong> block into its gap; everything inside the if
+                    comes with it.</p>
+                    <p>Run it and see where the triangle ends up.</p>
+                `,
+                final: true,
+            },
+        ],
+    },
     programming: {
         label: "New to coding",
+        programMode: "python",
         steps: [
             {
                 target: "#mazeCanvas",
@@ -31,7 +228,7 @@ const tutorialDefinitions = {
                     tell Python to do it now.</p>
                     <p>Python runs them in order, top to bottom.</p>
                 `,
-                code: "move()\nmove()\nmove()",
+                code: THREE_MOVES,
                 autoInsert: true,
             },
             {
@@ -44,9 +241,10 @@ const tutorialDefinitions = {
                     <p>If the button is greyed out, Python is still starting up. It
                     takes a few seconds the first time.</p>
                 `,
+                code: THREE_MOVES,
                 requiresRun: true,
                 validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "The triangle did not move. Put move() back in the editor, one per line, and press Run program again.",
+                failure: "The triangle did not move. Press Replace editor with example, then Run program.",
             },
             {
                 target: "#buttons",
@@ -67,7 +265,8 @@ const tutorialDefinitions = {
                     <p><code>print()</code> puts a message in Output. A line starting
                     with <code>#</code> is a note for humans; Python skips it.</p>
                 `,
-                code: "# Turn right, then move twice\nturn_right()\nmove()\nmove()\nprint(\"Done\")",
+                code: TURN_AND_MOVE,
+                autoInsert: true,
             },
             {
                 target: "#runBtn",
@@ -77,13 +276,14 @@ const tutorialDefinitions = {
                     <p>Press <strong>Run program</strong>. The triangle should turn
                     downwards, move two squares, and print your message.</p>
                 `,
+                code: TURN_AND_MOVE,
                 requiresRun: true,
                 validate: result => (
                     !result.hadError &&
                     result.actions.includes("turnRight") &&
                     countActions(result, "move") >= 2
                 ),
-                failure: "That did not turn and then move twice. Insert the example again and press Run program.",
+                failure: "That did not turn and then move twice. Press Replace editor with example, then Run program.",
             },
             {
                 target: "#output",
@@ -105,7 +305,8 @@ const tutorialDefinitions = {
                     other. The four spaces show which lines belong to which
                     choice.</p>
                 `,
-                code: "if path_ahead():\n    move()\nelse:\n    turn_right()",
+                code: FIRST_DECISION,
+                autoInsert: true,
             },
             {
                 target: "#runBtn",
@@ -116,9 +317,14 @@ const tutorialDefinitions = {
                     the triangle moves.</p>
                     <p>If Python complains, check the colon and the spaces.</p>
                 `,
+                code: FIRST_DECISION,
                 requiresRun: true,
-                validate: result => !result.hadError && countActions(result, "move") >= 1,
-                failure: "That did not finish cleanly. Check the colons and the four-space indents, then run it again.",
+                validate: result => (
+                    !result.hadError &&
+                    usesWord(result, "if") &&
+                    countActions(result, "move") >= 1
+                ),
+                failure: "That was not the if example. Press Replace editor with example, then Run program.",
             },
             {
                 target: "#code",
@@ -128,7 +334,8 @@ const tutorialDefinitions = {
                     the answer stays <code>True</code>.</p>
                     <p>Two lines produce many moves, and you never say how many.</p>
                 `,
-                code: "while path_ahead():\n    move()",
+                code: FIRST_LOOP,
+                autoInsert: true,
             },
             {
                 target: "#runBtn",
@@ -138,9 +345,14 @@ const tutorialDefinitions = {
                     <p>Press <strong>Run program</strong>. The triangle runs down the
                     corridor and stops itself at the wall.</p>
                 `,
+                code: FIRST_LOOP,
                 requiresRun: true,
-                validate: result => !result.hadError && countActions(result, "move") >= 3,
-                failure: "The loop did not reach the wall. Insert the example again, check the indent, and run it.",
+                validate: result => (
+                    !result.hadError &&
+                    usesWord(result, "while") &&
+                    countActions(result, "move") >= 3
+                ),
+                failure: "That was not the while loop reaching the wall. Press Replace editor with example, then Run program.",
             },
             {
                 target: "#runBtn",
@@ -153,13 +365,15 @@ const tutorialDefinitions = {
                     branch that fits. Run one round.</p>
                 `,
                 code: RIGHT_HAND_ROUND,
+                autoInsert: true,
                 requiresRun: true,
                 validate: result => (
                     !result.hadError &&
+                    usesWord(result, "elif") &&
                     result.actions.includes("turnRight") &&
                     countActions(result, "move") >= 1
                 ),
-                failure: "Expected a right turn and a move. Insert the example again and press Run program.",
+                failure: "Expected a right turn and a move. Press Replace editor with example, then Run program.",
             },
             {
                 target: "#code",
@@ -170,7 +384,8 @@ const tutorialDefinitions = {
                     <p><code>at_goal()</code> is <code>True</code> only on the green
                     square, and <code>not</code> flips it, so
                     <code>while not at_goal():</code> keeps going until you arrive.
-                    Put the rule inside it, indented.</p>
+                    Put the rule inside it: select the rule and press Tab to
+                    indent it.</p>
                     <p>Have a go. If you get stuck, the <strong>Beginner Guide</strong>
                     tab builds it up line by line, and <strong>Load sample</strong>
                     shows one finished answer.</p>
@@ -181,6 +396,7 @@ const tutorialDefinitions = {
     },
     python: {
         label: "New to Python",
+        programMode: "python",
         steps: [
             {
                 target: "#mazeCanvas",
@@ -283,6 +499,7 @@ const tutorialDefinitions = {
     },
     instructions: {
         label: "Quick start",
+        programMode: "python",
         steps: [
             {
                 target: "#mazeCanvas",
@@ -391,6 +608,16 @@ let closeConfirmPending = false;
 
 function countActions(result, actionType) {
     return result.actions.filter(action => action === actionType).length;
+}
+
+/*
+  Whether the program that ran uses a keyword. The actions alone cannot tell
+  the loop example from three move() lines left over from an earlier card,
+  and a step that passes on leftover code teaches nothing.
+*/
+function usesWord(result, word) {
+    const code = (result.code || "").replace(/#.*$/gm, "");
+    return new RegExp(`\\b${word}\\b`).test(code);
 }
 
 function currentTutorial() {
@@ -603,22 +830,31 @@ function renderStep() {
     stepBody.innerHTML = step.body;
     setFeedback(step.requiresRun ? "Run the program to complete this step." : "");
 
-    insertCodeButton.hidden = !step.code;
-    insertCodeButton.textContent = "Replace editor with example";
+    insertCodeButton.hidden = !(step.code || step.blocks);
+    insertCodeButton.textContent = step.blocks
+        ? "Replace blocks with example"
+        : "Replace editor with example";
 
     // Some steps put their example into the editor for the learner, so that the
     // very first thing they do is run a working program rather than type one.
-    if (step.code && step.autoInsert) {
-        const editor = document.getElementById("code");
-        editor.value = step.code;
-        editor.dispatchEvent(new Event("input"));
-    }
+    if (step.autoInsert) insertExample(step);
 
     backButton.disabled = currentStepIndex === 0;
     nextButton.disabled = Boolean(step.requiresRun);
     nextButton.textContent = step.final ? "Finish tutorial" : "Continue";
 
     showCoachmark();
+}
+
+/* Put a step's example program into the blocks or the Python editor. */
+function insertExample(step) {
+    if (step.blocks) {
+        globalThis.mazeBlocks?.load(step.blocks);
+    } else if (step.code) {
+        const editor = document.getElementById("code");
+        editor.value = step.code;
+        editor.dispatchEvent(new Event("input"));
+    }
 }
 
 function startTutorial(mode) {
@@ -630,7 +866,10 @@ function startTutorial(mode) {
     tutorialIsMinimized = false;
     resumeButton.hidden = true;
     toolbar.hidden = false;
-    document.dispatchEvent(new CustomEvent("tutorial:start", {detail: {mode}}));
+    // maze.js switches to this tutorial's mode, blocks or Python, on hearing it.
+    document.dispatchEvent(new CustomEvent("tutorial:start", {
+        detail: {mode, programMode: tutorialDefinitions[mode].programMode},
+    }));
     renderStep();
 }
 
@@ -650,7 +889,8 @@ function finishTutorial(completed = false) {
         }));
     }
 
-    const editor = document.getElementById("code");
+    const blocksMode = document.documentElement.dataset.mode === "blocks";
+    const editor = document.getElementById(blocksMode ? "blocksEditor" : "code");
     editor.scrollIntoView({block: "center"});
     editor.focus({preventScroll: true});
 }
@@ -712,12 +952,22 @@ closeSelectorButton.addEventListener("click", closeSelector);
 
 insertCodeButton.addEventListener("click", () => {
     const step = currentStep();
-    if (!step?.code) return;
+    if (!step) return;
 
-    const editor = document.getElementById("code");
-    editor.value = step.code;
-    editor.dispatchEvent(new Event("input"));
-    editor.focus();
+    insertExample(step);
+    if (step.code) document.getElementById("code").focus();
+});
+
+/*
+  Every card points at parts of one mode's editor, which the other mode hides.
+  Switching mode partway through would leave the cards pointing at nothing,
+  so the tutorial closes instead.
+*/
+document.addEventListener("maze:mode", event => {
+    const tutorial = currentTutorial();
+    if (tutorialIsOpen && tutorial && tutorial.programMode !== event.detail.mode) {
+        finishTutorial();
+    }
 });
 
 backButton.addEventListener("click", () => {

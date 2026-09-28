@@ -8,8 +8,10 @@ The actual maze and drawing are handled by JavaScript in maze.js.
 import contextlib
 import io
 import json
+import linecache
 import sys
 import time
+import traceback
 
 import js
 from js import js_enqueue_action
@@ -18,6 +20,31 @@ from js import js_enqueue_action
 # 0 = up, 1 = right, 2 = down, 3 = left
 DIRS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 DIR_NAMES = ["up", "right", "down", "left"]
+
+# The learner's program is compiled under its own name so that tracebacks and
+# the step counter can tell its lines apart from the lines of this file.
+USER_FILENAME = "<your program>"
+
+# The names a learner's program can see. Each run starts from these alone, so
+# a variable left over from an earlier run cannot change what this one does,
+# and a learner's own variable called ``direction`` or ``maze`` cannot
+# overwrite the game state of the same name in this file.
+LEARNER_API = (
+    "move",
+    "turn_left",
+    "turn_right",
+    "path_ahead",
+    "path_behind",
+    "path_left",
+    "path_right",
+    "at_goal",
+    "position",
+)
+
+
+class StepLimitError(Exception):
+    """Raised when user code exceeds the allowed step/time budget."""
+
 
 # Maze and position state. JavaScript calls _sync_maze_from_js() whenever a
 # different fixed or generated maze is selected.
@@ -62,43 +89,125 @@ def run_user_code(src, max_seconds, max_steps):
     Execute user code with a time + executed-lines limit.
 
     Raises StepLimitError if either limit is exceeded, and otherwise returns
-    the number of lines executed. Challenge mode uses that count to set each
-    difficulty's budget from what a correct program really costs.
+    the number of lines executed. Only the learner's own lines count, not the
+    lines inside move() and the other API functions, so the figure means what
+    the error message says it means. Challenge mode uses that count to set
+    each difficulty's budget from what a correct program really costs.
     """
     start = time.time()
     steps = 0
 
-    class StepLimitError(Exception):
-        """Raised when user code exceeds the allowed step/time budget."""
-
     def trace(frame, event, arg):
         nonlocal steps
 
-        if frame.f_code.co_filename != "<exec>":
+        if frame.f_code.co_filename != USER_FILENAME:
             return None
 
         if event == "line":
             steps += 1
             if steps > max_steps:
                 raise StepLimitError(
-                    f"Program stopped: too many steps (>{max_steps}). "
-                    "Check for an infinite loop."
+                    f"Stopped after running {max_steps:,} lines of your "
+                    "program. Check for a loop that never ends."
                 )
             if (time.time() - start) > max_seconds:
                 raise StepLimitError(
-                    f"Program stopped: took too long (>{max_seconds:.1f}s). "
-                    "Check for an infinite loop."
+                    f"Stopped after running for {max_seconds:g} seconds. "
+                    "Check for a loop that never ends."
                 )
         return trace
 
+    # Tracebacks read source lines through linecache, which cannot find a
+    # program that only exists in the editor. Registering it is what lets an
+    # error show the learner the line that caused it. Every line needs its
+    # newline, as linecache gives the lines of a real file: without one on the
+    # last line, Python 3.12 draws its ^^^ markers one character too far right.
+    lines = src.splitlines(True)
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    linecache.cache[USER_FILENAME] = (len(src), None, lines, USER_FILENAME)
+    namespace = {"__name__": "__main__"}
+    namespace.update({name: globals()[name] for name in LEARNER_API})
+    # Not part of the taught API: the Python that blocks mode generates calls
+    # it before each block, so the page can light up the block that is running.
+    namespace["_highlight_block"] = _highlight_block
+
     sys.settrace(trace)
     try:
-        code_obj = compile(src, "<exec>", "exec")
-        exec(code_obj, globals(), globals())
+        code_obj = compile(src, USER_FILENAME, "exec")
+        exec(code_obj, namespace)
     finally:
         sys.settrace(None)
 
     return steps
+
+
+def format_user_error(exc):
+    """
+    Describe an exception in terms of the learner's own program.
+
+    Only frames from the learner's code are kept, so every line number matches
+    the editor. A frame inside this file, such as the body of move(), would
+    send someone who wrote two lines looking for a line 300 they do not have.
+    """
+    report = traceback.TracebackException.from_exception(exc)
+    frames = [frame for frame in report.stack if frame.filename == USER_FILENAME]
+
+    lines = []
+    if frames:
+        lines.append("Traceback (most recent call last):\n")
+        lines.extend(traceback.StackSummary.from_list(frames).format())
+    lines.extend(report.format_exception_only())
+    return "".join(lines).rstrip("\n")
+
+
+class _LineTracker:
+    """
+    Pass printed text through, remembering whether it stopped mid-line.
+
+    Pyodide hands printed text to the page a line at a time, and flushing does
+    not release a partial line. So a program whose last print() used end=""
+    had that text held back, to appear at the start of the next run's output.
+    """
+
+    def __init__(self, stream):
+        self._stream = stream
+        self.mid_line = False
+
+    def write(self, text):
+        if text:
+            self.mid_line = not text.endswith("\n")
+        return self._stream.write(text)
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def run_program(src, max_seconds, max_steps):
+    """
+    Run the learner's program for the Run button and report how it went.
+
+    Returns a JSON string. ``error`` is the traceback trimmed to the learner's
+    own code, or empty. ``stuck`` says the program was stopped for running too
+    long, which the page uses to replay a loop briefly rather than animate
+    every lap of it.
+    """
+    output = _LineTracker(sys.stdout)
+    try:
+        with contextlib.redirect_stdout(output):
+            run_user_code(str(src), float(max_seconds), int(max_steps))
+    except Exception as exc:  # noqa: BLE001 - report whatever user code did
+        result = {
+            "error": format_user_error(exc),
+            "stuck": isinstance(exc, StepLimitError),
+        }
+    else:
+        result = {"error": "", "stuck": False}
+    finally:
+        if output.mid_line:
+            sys.stdout.write("\n")
+
+    return json.dumps(result)
 
 
 def reset_state():
@@ -188,6 +297,7 @@ def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
         js_enqueue_action = count_action
 
         error = ""
+        stuck = False
         steps = max_steps
         # A challenge run executes the program dozens of times, so any print()
         # inside it would flood the Output panel with one copy per maze.
@@ -196,6 +306,7 @@ def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
                 steps = run_user_code(src, max_seconds, max_steps)
         except Exception as exc:  # noqa: BLE001 - report whatever user code did
             error = f"{type(exc).__name__}: {exc}"
+            stuck = isinstance(exc, StepLimitError)
 
         # Checked directly rather than through at_goal() so that a user program
         # which happens to redefine at_goal() cannot mark its own homework.
@@ -203,7 +314,7 @@ def run_challenge_maze(src, level, seed, max_steps=15000, max_seconds=2.0):
 
         if reached:
             reason = "reached"
-        elif "too many steps" in error or "took too long" in error:
+        elif stuck:
             reason = "stuck"
         elif error:
             reason = "error"
@@ -296,7 +407,7 @@ def move():
 
     if not _in_bounds(nr, nc):
         raise RuntimeError(
-            f"Can't move {DIR_NAMES[direction]} from (row={row}, col={col}) — "
+            f"Can't move {DIR_NAMES[direction]} from (row={row}, col={col}): "
             "that would leave the maze. Try checking path_ahead() first."
         )
 
@@ -369,6 +480,16 @@ def at_goal():
     Return True if the player is currently on the goal cell.
     """
     return (row == goal_row) and (col == goal_col)
+
+
+def _highlight_block(block_id):
+    """
+    Record that a block is about to run.
+
+    It joins the same queue as the moves, so the page lights each block up at
+    the moment the triangle carries it out rather than all at once.
+    """
+    js_enqueue_action("highlight:" + str(block_id))
 
 
 def position():
