@@ -112,6 +112,8 @@
     const state = {
         running: false,
         stopRequested: false,
+        /* The mode of the program being tested, "blocks" or "python". */
+        mode: "python",
         unlocked: false,
         failure: null,
         results: new Map(),
@@ -445,12 +447,32 @@
             );
         }
         if (result.reason === "error") {
-            return `Your program stopped with an error: ${result.error}`;
+            return state.mode === "blocks"
+                ? describeBlocksError(result)
+                : `Your program stopped with an error: ${result.error}`;
         }
         return (
             `Your program finished after ${result.moves} moves without reaching ` +
             `the goal. The shortest route is ${result.shortest} moves.`
         );
+    }
+
+    /*
+      Plain words for code blocks, as maze.js gives after a normal run. The
+      error itself says "Try checking path_ahead() before move()", naming
+      Python that someone using blocks has never seen. Walking into a wall
+      is the only error blocks can make; anything else is passed on as is.
+    */
+    function describeBlocksError(result) {
+        if (!/^RuntimeError: (Wall ahead|Can't move)/.test(result.error)) {
+            return `The code blocks stopped with an error: ${result.error}`;
+        }
+        const moves = result.moves;
+        const when = moves === 0
+            ? "on its first move"
+            : `after ${moves.toLocaleString()} ${moves === 1 ? "move" : "moves"}`;
+        return `The triangle walked into a wall ${when}. Load the maze below ` +
+            "to see which block did it.";
     }
 
     function showFailure(tier, result, watchable) {
@@ -581,6 +603,7 @@
 
         try {
             await game.ready();
+            state.mode = game.getMode();
             await game.setGlobal("PMG_CHALLENGE_SRC", game.getCode());
             await game.setGlobal("PMG_CHALLENGE_MAX_SECONDS", CHALLENGE_MAX_SECONDS);
 

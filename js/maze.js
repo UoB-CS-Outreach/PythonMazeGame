@@ -1193,10 +1193,23 @@ document.querySelectorAll("#modeSwitch [data-mode]").forEach(button => {
 });
 
 /*
-  Put a whole program into the Python editor, for Load sample and for
-  converting blocks. Replacing work in progress needs a confirmation, but an
-  empty or untouched editor does not, and a browser confirm() dialog in the
-  middle of a short activity is worth avoiding. Returns whether it replaced.
+  Put a whole program into the Python editor and show it. It goes in through
+  the editor's own editing, so Ctrl+Z brings back whatever was there, which
+  matters most when someone has just agreed to replace their work by
+  mistake. That only works on an editor that is showing, so Python mode
+  comes first.
+*/
+function setEditorProgram(text) {
+    setProgramMode("python");
+    const code = document.getElementById("code");
+    replaceEditorText(code, 0, code.value.length, text);
+}
+
+/*
+  The same for Load sample and for converting blocks, which replace work in
+  progress only after a confirmation. An empty or untouched editor needs
+  none, and a browser confirm() dialog in the middle of a short activity is
+  worth avoiding. Returns whether it replaced.
 */
 function replaceEditorProgram(text, question) {
     const code = document.getElementById("code");
@@ -1207,17 +1220,14 @@ function replaceEditorProgram(text, question) {
 
     if (!untouched && !window.confirm(question)) return false;
 
-    code.value = text;
-    code.dispatchEvent(new Event("input")); // refresh line numbers
+    setEditorProgram(text);
     return true;
 }
 
 document.getElementById("sampleBtn").addEventListener("click", async () => {
     const response = await fetch("samples/default.txt");
     const sample = await response.text();
-    if (replaceEditorProgram(sample, "Replace your code with the sample solver?")) {
-        document.getElementById("code").focus();
-    }
+    replaceEditorProgram(sample, "Replace your code with the sample solver?");
 });
 
 document.getElementById("mazeSelect").addEventListener("change", event => {
@@ -1289,8 +1299,12 @@ globalThis.mazeGame = {
         ? (globalThis.mazeBlocks?.python() ?? "")
         : document.getElementById("code").value),
 
-    /* Replace the Python editor's contents, asking first if it holds work. */
+    /*
+      Replace the Python editor's contents and switch to it, keeping Ctrl+Z.
+      replaceCode asks first if the editor holds work; setCode does not.
+    */
     replaceCode: replaceEditorProgram,
+    setCode: setEditorProgram,
 
     /* "blocks" or "python", and switching between them. */
     getMode: () => programMode,

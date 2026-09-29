@@ -281,18 +281,14 @@
     });
     if (document.documentElement.dataset.mode === "blocks") showBlocks();
 
-    /* Put the blocks' Python into the editor and switch to Python mode. */
+    /* Put the blocks' Python into the editor; that switches to Python mode. */
     function convertToPython() {
         const game = globalThis.mazeGame;
         const code = toPython();
         if (!game || !code.trim()) return;
 
         const converted = `# Your blocks, written as Python\n${code}`;
-        if (!game.replaceCode(converted, "Replace your Python code with your blocks?")) {
-            return;
-        }
-        game.setMode("python");
-        document.getElementById("code").focus();
+        game.replaceCode(converted, "Replace your Python code with your blocks?");
     }
 
     /*

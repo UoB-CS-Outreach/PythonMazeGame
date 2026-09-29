@@ -14,6 +14,7 @@ import json
 import re
 import sys
 import threading
+import time
 import types
 import unittest
 from pathlib import Path
@@ -325,6 +326,24 @@ class RunProgramTests(MazeApiTestCase):
 
         self.assertEqual(result["error"], "")
         self.assertEqual(printed.getvalue(), "Giving up\n")
+
+    def test_sleeping_does_nothing_during_a_run(self):
+        # Pyodide's sleep keeps the browser busy, so it froze the page.
+        real_sleep = time.sleep
+        started = time.monotonic()
+
+        result = self.run_program("import time\ntime.sleep(30)\nmove()\n")
+
+        self.assertEqual(result["error"], "")
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertIs(time.sleep, real_sleep)
+
+    def test_input_explains_that_it_cannot_be_used(self):
+        result = self.run_program('name = input("Name? ")\n')
+
+        self.assertIn(
+            "RuntimeError: input() does not work here", result["error"].splitlines()[-1]
+        )
 
     def test_each_run_starts_with_none_of_the_last_runs_variables(self):
         self.run_program("remembered = 1\n")

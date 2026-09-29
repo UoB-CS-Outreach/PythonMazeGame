@@ -134,6 +134,29 @@ def test_exit_ends_the_program_without_a_traceback(page):
     assert "Traceback" not in page.evaluate("T.$('#output').value")
 
 
+def test_sleep_does_not_freeze_the_page(page):
+    # Pyodide's sleep waits by keeping the browser busy, and it cannot slow
+    # the triangle anyway: the moves are played back after the program ends.
+    page.evaluate("T.$('#tutorialSelector').close()")
+    page.evaluate("T.$('#code').value = 'import time\\ntime.sleep(60)\\nmove()'")
+
+    page.evaluate("void T.run().then(result => { window.lastRun = result; })")
+    page.wait_for_function("window.lastRun", timeout=10000)
+
+    assert not page.evaluate("window.lastRun.hadError")
+
+
+def test_a_blocks_challenge_failure_is_described_without_python(page):
+    page.evaluate("T.$('#tutorialSelector').close(); mazeGame.setMode('blocks')")
+    page.evaluate("mazeBlocks.load(['move'])")
+
+    page.evaluate("challengeMode.unlock(); challengeMode.run()")
+
+    text = page.evaluate("T.$('.challenge-failure-text').textContent")
+    assert text.startswith("The triangle walked into a wall on its first move.")
+    assert "path_ahead" not in text
+
+
 def test_the_goal_popup_challenge_moves_the_tutorial_aside(page):
     # On the last card the tutorial's backdrop covers the challenge panel,
     # so the challenge could not be stopped or its result used.
@@ -194,7 +217,7 @@ def test_a_late_blocks_editor_still_gets_the_tutorial_example(open_app):
     assert page.evaluate("mazeBlocks.python()") == "move()\nmove()\n"
 
 
-def test_convert_to_python_asks_before_replacing_code(page):
+def test_convert_to_python_asks_first_and_can_be_undone(page):
     answers = []
     page.on("dialog", lambda dialog: answers.pop(0)(dialog))
     page.evaluate("T.$('#tutorialSelector').close()")
@@ -211,6 +234,10 @@ def test_convert_to_python_asks_before_replacing_code(page):
     assert page.evaluate("mazeGame.getMode()") == "python"
     assert page.evaluate("T.$('#code').value").endswith("move()\nturn_right()\n")
     assert answers == []
+
+    # Someone who agreed by mistake can get their code back.
+    page.keyboard.press("Control+z")
+    assert page.evaluate("T.$('#code').value") == "print(1)"
 
 
 def test_the_page_fits_a_phone_screen(open_app):

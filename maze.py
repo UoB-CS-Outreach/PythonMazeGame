@@ -158,6 +158,9 @@ def run_user_code(src, max_seconds, max_steps):
     # Not part of the taught API: the Python that blocks mode generates calls
     # it before each block, so the page can light up the block that is running.
     namespace["_highlight_block"] = _highlight_block
+    # There is nothing for input() to read from here, and it failed with "I/O
+    # operation on closed file", which tells a learner nothing.
+    namespace["input"] = _input_unavailable
 
     events = monitoring.events
     tool = next((tool for tool in range(6) if monitoring.get_tool(tool) is None), None)
@@ -167,6 +170,12 @@ def run_user_code(src, max_seconds, max_steps):
     monitoring.register_callback(tool, events.LINE, on_line)
     monitoring.register_callback(tool, events.JUMP, on_jump)
     monitoring.set_events(tool, events.LINE | events.JUMP)
+    # time.sleep() cannot slow the triangle down, because the moves are only
+    # played back once the program has finished. In Pyodide it waits by
+    # keeping the browser busy, which froze the page for as long as it was
+    # asked to, so while a learner's program runs it does nothing.
+    real_sleep = time.sleep
+    time.sleep = _skip_sleep
     try:
         code_obj = compile(src, USER_FILENAME, "exec")
         exec(code_obj, namespace)
@@ -178,6 +187,7 @@ def run_user_code(src, max_seconds, max_steps):
         if exc.code is not None and not isinstance(exc.code, int):
             sys.stdout.write(f"{exc.code}\n")
     finally:
+        time.sleep = real_sleep
         # Freeing a tool id does not switch off its events or callbacks.
         monitoring.set_events(tool, 0)
         monitoring.register_callback(tool, events.LINE, None)
@@ -525,6 +535,18 @@ def at_goal():
     Return True if the player is currently on the goal cell.
     """
     return (row == goal_row) and (col == goal_col)
+
+
+def _skip_sleep(seconds):
+    """Stand in for time.sleep() while a learner's program runs."""
+
+
+def _input_unavailable(prompt=""):
+    """Stand in for input(), which has nothing to read from in the page."""
+    raise RuntimeError(
+        "input() does not work here: a program cannot stop and wait for "
+        "typing while it runs. Put the value in your program instead."
+    )
 
 
 def _highlight_block(block_id):

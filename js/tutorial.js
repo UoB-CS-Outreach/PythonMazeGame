@@ -829,8 +829,13 @@ insertCodeButton.addEventListener("click", () => {
     const step = currentStep();
     if (!step) return;
 
-    insertExample(step);
-    if (step.code) document.getElementById("code").focus();
+    // A replacement asked for by the learner goes through maze.js, which
+    // keeps Ctrl+Z able to bring back the code it replaced.
+    if (step.code && globalThis.mazeGame) {
+        globalThis.mazeGame.setCode(step.code);
+    } else {
+        insertExample(step);
+    }
 });
 
 /*
