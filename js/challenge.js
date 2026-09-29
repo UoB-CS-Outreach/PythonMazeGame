@@ -9,9 +9,10 @@
  * Hard and Expert ones, and no Plaza at all. The first failure can be loaded
  * into the main view and watched, since that is where the lesson is.
  *
- * The panel stays hidden until the learner first reaches the goal in Python
- * mode. Before then there is nothing to test, and a panel promising 150 mazes
- * is one more thing to take in for someone who has not solved one yet.
+ * The panel stays hidden until the learner first reaches the goal, with code
+ * blocks or Python. Before then there is nothing to test, and a panel
+ * promising 150 mazes is one more thing to take in for someone who has not
+ * solved one yet. After that it tests whichever of the two is in use.
  *
  * The maze, Python and drawing all stay in maze.js; everything here goes
  * through the globalThis.mazeGame bridge it publishes. The markup is built in
@@ -72,9 +73,7 @@
     */
     const CHALLENGE_MAX_SECONDS = 3;
 
-    const IDLE_STATUS =
-        "Not run yet. Put your solver in the code editor, then start the " +
-        "challenge.";
+    const IDLE_STATUS = "Not run yet.";
 
     const state = {
         running: false,
@@ -137,9 +136,8 @@
         panel.appendChild(createElement(
             "p",
             "challenge-intro",
-            `Runs the program in the editor against ${TOTAL_MAZES} freshly ` +
-            "generated mazes, from Easy to Marathon, and counts how many it " +
-            "solves.",
+            `Runs your program against ${TOTAL_MAZES} freshly generated ` +
+            "mazes, from Easy to Marathon, and counts how many it solves.",
         ));
 
         const actions = createElement("div", "challenge-actions");
@@ -226,8 +224,8 @@
     }
 
     /*
-      The first time a Python program reaches the goal, open the panel and
-      offer to run it straight away. Either answer leaves the panel open.
+      The first time a program reaches the goal, open the panel and offer to
+      run it straight away. Either answer leaves the panel open.
     */
     async function offerChallenge() {
         const game = globalThis.mazeGame;
@@ -591,9 +589,7 @@
                 setStatus(`Challenge mode is unavailable: ${error.message}`, true);
             });
 
-        document.addEventListener("maze:goal-reached", event => {
-            if (event.detail.mode === "python") offerChallenge();
-        });
+        document.addEventListener("maze:goal-reached", offerChallenge);
 
         /* A small hook for the console and for automated checks. */
         globalThis.challengeMode = {

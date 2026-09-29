@@ -884,8 +884,8 @@ function describeErrorForBlocks(error) {
             "move that hit it.";
     }
     if (lastLine.startsWith("StepLimitError")) {
-        return "The blocks were still running after a long time, so Python " +
-            "stopped them.";
+        return "The code blocks were still running after a long time, so " +
+            "Python stopped them.";
     }
     return lastLine;
 }
@@ -1231,8 +1231,10 @@ globalThis.mazeGame = {
     /* Disable the run and maze controls while a long task is in progress. */
     setBusy: inProgress => setMazeChangeInProgress(inProgress),
 
-    /* The current contents of the Python editor. */
-    getCode: () => document.getElementById("code").value,
+    /* The program in use: the Python editor's, or the code blocks' as Python. */
+    getCode: () => (programMode === "blocks"
+        ? (globalThis.mazeBlocks?.python() ?? "")
+        : document.getElementById("code").value),
 
     /* Replace the Python editor's contents, asking first if it holds work. */
     replaceCode: replaceEditorProgram,

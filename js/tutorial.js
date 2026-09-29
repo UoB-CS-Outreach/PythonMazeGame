@@ -8,7 +8,7 @@
 const RIGHT_HAND_ROUND = "if path_right():\n    turn_right()\n    move()\nelif path_ahead():\n    move()\nelse:\n    turn_left()";
 
 /*
-  The "New to coding" examples. Each one appears on two cards: the card that
+  The "Python, step by step" examples. Each one appears on two cards: the card that
   explains it puts it in the editor, so the code being described is the code
   on screen, and the card that asks for a run offers it again in case the
   learner has edited it into something that no longer works.
@@ -35,7 +35,7 @@ const RIGHT_HAND_BLOCKS = [{
 
 const tutorialDefinitions = {
     blocks: {
-        label: "Blocks",
+        label: "Code blocks",
         programMode: "blocks",
         steps: [
             {
@@ -52,7 +52,7 @@ const tutorialDefinitions = {
                 target: "#blocksEditor",
                 title: "Instructions go here",
                 body: `
-                    <p>Each block is one instruction. The computer runs them from the
+                    <p>Each code block is one instruction. The computer runs them from the
                     top, starting under <strong>when Run is pressed</strong>.</p>
                     <p>Two <strong>move forward</strong> blocks are there
                     already.</p>
@@ -205,7 +205,7 @@ const tutorialDefinitions = {
         ],
     },
     programming: {
-        label: "New to coding",
+        label: "Python, step by step",
         programMode: "python",
         steps: [
             {
@@ -395,7 +395,7 @@ const tutorialDefinitions = {
         ],
     },
     python: {
-        label: "New to Python",
+        label: "Python for coders",
         programMode: "python",
         steps: [
             {
@@ -497,89 +497,11 @@ const tutorialDefinitions = {
             },
         ],
     },
-    instructions: {
-        label: "Quick start",
-        programMode: "python",
-        steps: [
-            {
-                target: "#mazeCanvas",
-                title: "Maze objective",
-                body: `
-                    <p>Move the blue triangle from the top-left start to the green
-                    goal square. It starts facing right, and every run resets its
-                    position.</p>
-                `,
-            },
-            {
-                target: "#code",
-                title: "Write code here",
-                body: `
-                    <p>Write or paste your Python here. The line numbers help you
-                    match an error to a line.</p>
-                    <ul>
-                        <li>Act: <code>move()</code>, <code>turn_left()</code>,
-                        <code>turn_right()</code></li>
-                        <li>Check: <code>path_ahead()</code>,
-                        <code>path_behind()</code>, <code>path_left()</code>,
-                        <code>path_right()</code></li>
-                        <li>Finish condition: <code>at_goal()</code></li>
-                        <li>Where you are: <code>position()</code></li>
-                    </ul>
-                    <p><strong>Load sample</strong>, below the editor, replaces the
-                    contents with a complete solver.</p>
-                `,
-            },
-            {
-                target: "#buttons",
-                title: "Run, reset and adjust speed",
-                body: `
-                    <p><strong>Run program</strong> resets the triangle to the start,
-                    then runs the whole code box. <strong>Reset position</strong> stops
-                    the current animation.</p>
-                    <p>The <strong>Speed</strong> slider controls only the animation
-                    rate.</p>
-                `,
-            },
-            {
-                target: "#output",
-                title: "Check output and errors",
-                body: `
-                    <p>The Output box is read-only. It shows <code>print()</code>
-                    text, whether the goal was reached, and any Python error.</p>
-                    <p>If a run fails, read the final line here before changing the
-                    code.</p>
-                `,
-            },
-            {
-                target: "#referenceTabs",
-                title: "Use the help tabs",
-                body: `
-                    <p><strong>Maze API &amp; Help</strong> is the concise function and
-                    error reference. <strong>Beginner Guide</strong> builds a solver
-                    step by step.</p>
-                    <p>The panel scrolls, so both stay available while you work.</p>
-                `,
-            },
-            {
-                target: "#mazeControls",
-                title: "Choose or generate a maze",
-                body: `
-                    <p>The <strong>Maze</strong> menu loads a difficulty or one of
-                    the extra challenges. <strong>Generate new maze</strong> creates a
-                    fresh layout of whichever one you are on.</p>
-                    <p>The tutorial maze stays loaded when this guidance closes, so
-                    change it when you are ready.</p>
-                `,
-                final: true,
-            },
-        ],
-    },
 };
 
 const selector = document.getElementById("tutorialSelector");
 const closeSelectorButton = document.getElementById("closeTutorialSelector");
-const toolbar = document.getElementById("tutorialToolbar");
-const status = document.getElementById("tutorialStatus");
+const tutorialsButton = document.getElementById("tutorialsBtn");
 const backdrop = document.getElementById("tutorialBackdrop");
 const coachmark = document.getElementById("tutorialCoachmark");
 const mazeCanvas = document.getElementById("mazeCanvas");
@@ -593,8 +515,6 @@ const minimizeTutorialButton = document.getElementById("tutorialMinimizeBtn");
 const backButton = document.getElementById("tutorialBackBtn");
 const nextButton = document.getElementById("tutorialNextBtn");
 const resumeButton = document.getElementById("resumeTutorialBtn");
-const restartButton = document.getElementById("restartTutorialBtn");
-const changeButton = document.getElementById("changeTutorialBtn");
 
 let currentMode = null;
 let currentStepIndex = 0;
@@ -658,19 +578,6 @@ function hideCoachmark() {
     coachmark.hidden = true;
     window.removeEventListener("resize", positionCoachmark);
     window.removeEventListener("scroll", positionCoachmark, true);
-}
-
-function updateStatus(completed = false) {
-    const tutorial = currentTutorial();
-    if (!tutorial) return;
-
-    if (completed) {
-        status.textContent = `${tutorial.label}: closed. You are working on your own now.`;
-    } else if (tutorialIsMinimized) {
-        status.textContent = `${tutorial.label}: minimized at step ${currentStepIndex + 1} of ${tutorial.steps.length}`;
-    } else {
-        status.textContent = `${tutorial.label}: step ${currentStepIndex + 1} of ${tutorial.steps.length}`;
-    }
 }
 
 /* The box enclosing every highlighted element for this step. */
@@ -795,7 +702,6 @@ function showCoachmark() {
     resumeButton.hidden = true;
     tutorialIsOpen = true;
     tutorialIsMinimized = false;
-    updateStatus();
 
     window.addEventListener("resize", positionCoachmark);
     window.addEventListener("scroll", positionCoachmark, true);
@@ -865,7 +771,6 @@ function startTutorial(mode) {
     tutorialIsOpen = true;
     tutorialIsMinimized = false;
     resumeButton.hidden = true;
-    toolbar.hidden = false;
     // maze.js switches to this tutorial's mode, blocks or Python, on hearing it.
     document.dispatchEvent(new CustomEvent("tutorial:start", {
         detail: {mode, programMode: tutorialDefinitions[mode].programMode},
@@ -878,7 +783,6 @@ function finishTutorial(completed = false) {
     tutorialIsMinimized = false;
     resumeButton.hidden = true;
     hideCoachmark();
-    updateStatus(true);
     document.dispatchEvent(new CustomEvent("tutorial:end", {
         detail: {mode: currentMode, completed}
     }));
@@ -898,7 +802,8 @@ function finishTutorial(completed = false) {
 function openSelector() {
     resumeAfterSelector = tutorialIsOpen && !tutorialIsMinimized;
     hideCoachmark();
-    closeSelectorButton.hidden = !currentMode;
+    // The first time, there is no tutorial to go back to, only none at all.
+    closeSelectorButton.textContent = currentMode ? "Cancel" : "Skip the tutorial";
 
     if (typeof selector.showModal === "function") {
         selector.showModal();
@@ -938,12 +843,8 @@ selector.querySelectorAll("[data-tutorial-mode]").forEach(option => {
     });
 });
 
+// Escape does what the Skip or Cancel button does.
 selector.addEventListener("cancel", event => {
-    if (!currentMode) {
-        event.preventDefault();
-        return;
-    }
-
     event.preventDefault();
     closeSelector();
 });
@@ -1007,7 +908,7 @@ closeTutorialButton.addEventListener("click", () => {
         closeConfirmPending = true;
         closeTutorialButton.textContent = "Yes, close it";
         setFeedback(
-            "Close the guidance? You can restart it from the toolbar below.",
+            "Close the guidance? You can start it again from Tutorials at the top.",
         );
         return;
     }
@@ -1022,7 +923,6 @@ minimizeTutorialButton.addEventListener("click", () => {
     tutorialIsMinimized = true;
     hideCoachmark();
     resumeButton.hidden = false;
-    updateStatus();
     resumeButton.focus({preventScroll: true});
 });
 
@@ -1031,11 +931,7 @@ resumeButton.addEventListener("click", () => {
     showCoachmark();
 });
 
-restartButton.addEventListener("click", () => {
-    if (currentMode) startTutorial(currentMode);
-});
-
-changeButton.addEventListener("click", openSelector);
+tutorialsButton.addEventListener("click", openSelector);
 
 document.addEventListener("maze:run-start", () => {
     const step = currentStep();

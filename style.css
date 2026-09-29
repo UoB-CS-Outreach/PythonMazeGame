@@ -265,15 +265,14 @@ h2 {
     opacity: 0.48;
 }
 
+/* Flat on purpose: a coloured glow under the button read as a blue smudge. */
 .button.primary {
     color: #ffffff;
     background: var(--blue);
-    box-shadow: 0 8px 18px rgba(23, 105, 224, 0.2);
 }
 
 .button.primary:not(:disabled):hover {
     background: #0e5ccc;
-    box-shadow: 0 10px 22px rgba(23, 105, 224, 0.28);
 }
 
 .button.secondary {
@@ -429,13 +428,12 @@ textarea {
 }
 
 /*
-  Blocks or Python. <html data-mode> says which, and each mode's own parts
-  carry .for-blocks or .for-python. The help panel and challenge mode are all
-  about typed Python, so blocks mode leaves them out.
+  Code blocks or Python. <html data-mode> says which, and each mode's own
+  parts carry .for-blocks or .for-python. The help panel is all about typed
+  Python, so blocks mode leaves it out.
 */
 html[data-mode="blocks"] .for-python,
-html:not([data-mode="blocks"]) .for-blocks,
-html[data-mode="blocks"] #challenge-mode {
+html:not([data-mode="blocks"]) .for-blocks {
     display: none;
 }
 
@@ -668,48 +666,34 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
 
 /* Tutorial selection and contextual guidance */
 
-.tutorial-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    margin-top: 20px;
-    border: 1px solid #c7d3df;
-    border-radius: 14px;
-    background: var(--paper);
-    box-shadow: var(--shadow);
+/* The one way back into the tutorials, in the header where it stays in view. */
+.header-button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    background: transparent;
+    color: #ffffff;
+    font-weight: 750;
 }
 
-.tutorial-toolbar[hidden] {
-    display: none;
+.header-button:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
-.tutorial-toolbar:has(#resumeTutorialBtn:not([hidden])) {
-    padding-bottom: 58px;
-}
-
-.tutorial-toolbar p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-
-.tutorial-toolbar-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
+/* Shown while a tutorial is minimised, so it can be brought back. */
 #resumeTutorialBtn {
     position: fixed;
     right: 16px;
     bottom: 16px;
     z-index: 899;
-    border-color: #0e5ccc;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid #0e5ccc;
+    border-radius: 10px;
     background: var(--blue);
     color: #ffffff;
+    font-weight: 750;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
 }
 
@@ -717,7 +701,6 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
     background: #0e5ccc;
 }
 
-.tutorial-toolbar button,
 .tutorial-selector button,
 .tutorial-coachmark button {
     min-height: 40px;
@@ -730,7 +713,6 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
     font-weight: 750;
 }
 
-.tutorial-toolbar button:hover,
 .tutorial-selector button:hover,
 .tutorial-coachmark button:hover {
     background: #eef3f9;
@@ -962,11 +944,6 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
 }
 
 @media (max-width: 600px) {
-    .tutorial-toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
     .tutorial-selector-panel {
         padding: 18px;
     }

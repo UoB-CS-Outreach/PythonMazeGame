@@ -21,6 +21,9 @@
         <span class="brand-divider" aria-hidden="true"></span>
         <strong>Python Maze Solver</strong>
     </a>
+    <button id="tutorialsBtn" class="header-button" type="button">
+        Tutorials
+    </button>
 </header>
 
 <main id="app">
@@ -103,13 +106,13 @@
                     <p class="step-label">Your program</p>
                     <h2 id="codeHeading">
                         <span class="for-python">Python code</span>
-                        <span class="for-blocks">Blocks</span>
+                        <span class="for-blocks">Code blocks</span>
                     </h2>
                 </div>
                 <div id="modeSwitch" class="mode-switch" role="group"
                      aria-label="Write the program with">
                     <button type="button" data-mode="blocks"
-                            aria-pressed="false">Blocks</button>
+                            aria-pressed="false">Code blocks</button>
                     <button type="button" data-mode="python"
                             aria-pressed="true">Python</button>
                 </div>
@@ -123,7 +126,7 @@
             <!-- blocks.js replaces this message with the blocks workspace. -->
             <div id="blocksEditor" class="blocks-editor for-blocks">
                 <p class="blocks-unavailable">
-                    Blocks could not be loaded. Switch to Python to carry on.
+                    Code blocks could not be loaded. Switch to Python to carry on.
                 </p>
             </div>
 
@@ -556,68 +559,49 @@ while not at_goal():
     <!-- Challenge mode builds its own contents into this mount point. -->
     <div id="challenge-mode"></div>
 
-    <div class="tutorial-toolbar" id="tutorialToolbar" hidden>
-        <p id="tutorialStatus" aria-live="polite"></p>
-        <div class="tutorial-toolbar-actions">
-            <button id="resumeTutorialBtn" type="button" hidden>
-                Resume tutorial
-            </button>
-            <button id="restartTutorialBtn" type="button">Restart tutorial</button>
-            <button id="changeTutorialBtn" type="button">Change tutorial</button>
-        </div>
-    </div>
+    <!-- Shown while a tutorial is minimised, to bring it back. -->
+    <button id="resumeTutorialBtn" type="button" hidden>Resume tutorial</button>
 </main>
 
 <dialog id="tutorialSelector" class="tutorial-selector"
         aria-labelledby="tutorialSelectorTitle"
         aria-describedby="tutorialSelectorDescription">
     <div class="tutorial-selector-panel">
-        <h2 id="tutorialSelectorTitle">Select a tutorial</h2>
+        <h2 id="tutorialSelectorTitle">Choose how to start</h2>
         <p id="tutorialSelectorDescription">
-            Choose the option that best matches your current experience. All
-            options use the same mazes. You can change the tutorial later.
+            You can switch between code blocks and Python at any time.
         </p>
 
         <div class="tutorial-options">
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="blocks">
-                <span class="tutorial-option-title">Start with blocks</span>
+                <span class="tutorial-option-title">Code blocks</span>
                 <span class="tutorial-option-description">
-                    No typing and no experience needed. Snap blocks together to
-                    guide the triangle, then turn them into Python if you want.
+                    Snap blocks together. No typing and no experience needed.
                 </span>
             </button>
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="programming">
-                <span class="tutorial-option-title">New to coding</span>
+                <span class="tutorial-option-title">Python, step by step</span>
                 <span class="tutorial-option-description">
-                    Start here with little or no computing experience. Learn what a
-                    program is, then practise commands, decisions and loops.
+                    Type real Python code, with each idea explained as you go.
                 </span>
             </button>
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="python">
-                <span class="tutorial-option-title">New to Python</span>
+                <span class="tutorial-option-title">Python for coders</span>
                 <span class="tutorial-option-description">
-                    For participants who know some programming but not Python. A quick
-                    tour of calls, output, Booleans, indentation, decisions and loops.
-                </span>
-            </button>
-
-            <button type="button" class="tutorial-option"
-                    data-tutorial-mode="instructions">
-                <span class="tutorial-option-title">Quick start</span>
-                <span class="tutorial-option-description">
-                    For participants already familiar with Python. Tours the maze,
-                    editor, controls, output and help before independent work.
+                    You have programmed before. A short tour of the commands and
+                    how Python differs.
                 </span>
             </button>
         </div>
 
+        <!-- tutorial.js relabels this "Cancel" once a tutorial has been chosen. -->
         <button id="closeTutorialSelector" class="tutorial-selector-close"
-                type="button" hidden>Keep current tutorial</button>
+                type="button">Skip the tutorial</button>
     </div>
 </dialog>
 

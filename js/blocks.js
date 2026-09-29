@@ -1,5 +1,5 @@
 /*
- * Blocks mode for the maze activity.
+ * Code blocks mode for the maze activity.
  *
  * Some visitors have never programmed, and typing Python is where many of them
  * stop. Here the program is built by snapping blocks together instead. The
@@ -171,7 +171,10 @@
             media: BLOCKLY_MEDIA,
             // A room full of lab PCs clicking at once is noise enough.
             sounds: false,
-            trashcan: true,
+            // Blockly's bin reopens every deleted block, including each
+            // example the tutorial replaced, as a heap of grey blocks.
+            // Dragging a block back into the list deletes it anyway.
+            trashcan: false,
             maxInstances: {maze_start: 1},
             grid: {spacing: 24, length: 2, colour: "#dbe2ea", snap: true},
             // Small enough that the right-hand rule, the widest program the
@@ -282,26 +285,6 @@
         }
         game.setMode("python");
         document.getElementById("code").focus();
-    });
-
-    /*
-      The first time blocks reach the goal, suggest the idea that makes a
-      program worth having: the same blocks on a maze they were not built for.
-      A stack of moves that only fits this maze gets lost, and a loop with a
-      decision does not.
-    */
-    let offeredNewMaze = false;
-    document.addEventListener("maze:goal-reached", async event => {
-        const game = globalThis.mazeGame;
-        if (event.detail.mode !== "blocks" || offeredNewMaze || !game) return;
-        offeredNewMaze = true;
-
-        const accepted = await game.showGoalDialog({
-            title: "You reached the goal",
-            text: "Now try the same blocks on a new maze they have never seen.",
-            action: "Try a new maze",
-        });
-        if (accepted) game.generate();
     });
 
     globalThis.mazeBlocks = {
