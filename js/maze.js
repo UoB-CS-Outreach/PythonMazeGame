@@ -807,11 +807,26 @@ function setMazeControlsEnabled(enabled) {
     document.getElementById("generateMazeBtn").disabled = !enabled;
 }
 
-function setMazeChangeInProgress(inProgress) {
-    const controlsEnabled = pythonReady && !inProgress;
+/*
+  Two things switch the run and maze controls off: a maze loading, and a
+  long task elsewhere such as a challenge run. Each is tracked on its own, so
+  that one finishing cannot switch the controls back on while the other is
+  still going: starting a tutorial mid-challenge loads the tutorial maze,
+  and its end used to reopen Run while the challenge was still running.
+*/
+let mazeChangeInProgress = false;
+let busyElsewhere = false;
+
+function updateRunControls() {
+    const controlsEnabled = pythonReady && !mazeChangeInProgress && !busyElsewhere;
     setMazeControlsEnabled(controlsEnabled);
     document.getElementById("runBtn").disabled = !controlsEnabled;
     document.getElementById("stopBtn").disabled = !controlsEnabled;
+}
+
+function setMazeChangeInProgress(inProgress) {
+    mazeChangeInProgress = inProgress;
+    updateRunControls();
 }
 
 async function activateMaze(nextMaze, level) {
@@ -1130,12 +1145,15 @@ document.getElementById("runBtn").addEventListener("click", () => {
   Stop halts the animation where it is, so the learner can see where the
   triangle had got to, and in code blocks mode which block was running.
   There is nothing to reset: every run starts again from the beginning.
+  Other scripts hear about it through "maze:run-stopped", which, unlike a
+  click on the button, only happens when there was a run to stop.
 */
 document.getElementById("stopBtn").addEventListener("click", () => {
     if (playingRun === null) return;
     playingRun = null;
     runCounter++;
     appendOutput("Stopped.");
+    document.dispatchEvent(new CustomEvent("maze:run-stopped"));
 });
 
 /*
@@ -1261,7 +1279,10 @@ globalThis.mazeGame = {
     },
 
     /* Disable the run and maze controls while a long task is in progress. */
-    setBusy: inProgress => setMazeChangeInProgress(inProgress),
+    setBusy: inProgress => {
+        busyElsewhere = inProgress;
+        updateRunControls();
+    },
 
     /* The program in use: the Python editor's, or the code blocks' as Python. */
     getCode: () => (programMode === "blocks"

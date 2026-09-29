@@ -123,11 +123,12 @@
                 <textarea id="code" spellcheck="false" wrap="off"></textarea>
             </div>
 
-            <!-- blocks.js replaces this message with the blocks workspace. -->
+            <!--
+              blocks.js replaces this message with the blocks workspace, or
+              with an explanation if Blockly could not be downloaded.
+            -->
             <div id="blocksEditor" class="blocks-editor for-blocks">
-                <p class="blocks-unavailable">
-                    Code blocks could not be loaded. Switch to Python to carry on.
-                </p>
+                <p class="blocks-unavailable">Loading code blocks…</p>
             </div>
 
             <div class="middle-actions">

@@ -426,12 +426,22 @@
     /* Explain a failure in the terms the activity uses, not in Python terms. */
     function describeFailure(result) {
         if (result.reason === "stuck") {
+            const watch = " Load the maze below to see what it is doing.";
+            // A program turning on the spot makes no moves at all, and one
+            // that barely moved has nothing worth comparing with the route.
+            if (result.moves === 0) {
+                return "It ran for a long time without moving the triangle, and " +
+                    "was still going when the run was cut short." + watch;
+            }
             const times = Math.round(result.moves / Math.max(1, result.shortest));
+            const compared = times >= 2
+                ? `, roughly ${times} times the ${result.shortest} moves the ` +
+                  "shortest route needs,"
+                : "";
             return (
                 `It made ${result.moves.toLocaleString()} moves without reaching ` +
-                `the goal, roughly ${times} times the ${result.shortest} moves the ` +
-                "shortest route needs, and was still going when the run was cut " +
-                "short. Load the maze below to see what it is doing."
+                `the goal${compared} and was still going when the run was cut ` +
+                "short." + watch
             );
         }
         if (result.reason === "error") {
@@ -563,6 +573,8 @@
         elements.stopButton.hidden = false;
         game.setBusy(true);
         game.setStatus("Running the challenge…");
+        // An open tutorial card moves aside so the panel can be used.
+        document.dispatchEvent(new CustomEvent("challenge:start"));
 
         let failed = null;
         let cannotStart = false;

@@ -107,6 +107,21 @@ a:focus-visible {
     background: rgba(255, 255, 255, 0.3);
 }
 
+/*
+  A phone is too narrow for the logo, the title and the Tutorials button on
+  one line. Without this the button was pushed off the right-hand edge.
+*/
+@media (max-width: 520px) {
+    .site-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .uob-logo {
+        height: 38px;
+    }
+}
+
 /* Layout */
 
 main {
@@ -1023,14 +1038,6 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
     }
 }
 
-/*
-  Four buttons on one line, with the two navigation buttons pushed right.
-  The labels change while the tutorial runs ("Close tutorial" becomes "Yes,
-  close it"), so the row is allowed to wrap rather than push a button out
-  past the edge of the card — and when it does wrap, the auto margin keeps
-  Back and Continue together on the right instead of stranding one of them
-  on the left.
-*/
 /*
   Two groups: leaving the tutorial on the left, moving through it on the right.
   Grouping them matters because the labels grow ("Continue" becomes "Finish

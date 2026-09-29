@@ -795,7 +795,10 @@ function closeSelector() {
         selector.removeAttribute("open");
     }
 
-    if (resumeAfterSelector) renderStep();
+    // Shown again as it was, rather than rendered afresh: a fresh render
+    // would reset a card the learner had already passed back to waiting
+    // for a run, and put its example back over their code.
+    if (resumeAfterSelector) showCoachmark();
     resumeAfterSelector = false;
 }
 
@@ -828,6 +831,22 @@ insertCodeButton.addEventListener("click", () => {
 
     insertExample(step);
     if (step.code) document.getElementById("code").focus();
+});
+
+/*
+  On a slow connection the blocks editor can arrive after the tutorial has
+  begun, so an example put in before then went nowhere. It gets the one the
+  learner would have been given by now.
+*/
+document.addEventListener("maze:blocks-ready", () => {
+    const tutorial = currentTutorial();
+    if (!tutorialIsOpen || tutorial?.programMode !== "blocks") return;
+
+    const given = tutorial.steps
+        .slice(0, currentStepIndex + 1)
+        .filter(step => step.autoInsert)
+        .pop();
+    if (given) insertExample(given);
 });
 
 /*
@@ -888,14 +907,23 @@ closeTutorialButton.addEventListener("click", () => {
     finishTutorial();
 });
 
-minimizeTutorialButton.addEventListener("click", () => {
-    if (!tutorialIsOpen) return;
+function minimizeTutorial() {
+    if (!tutorialIsOpen || tutorialIsMinimized) return;
 
     tutorialIsMinimized = true;
     hideCoachmark();
     resumeButton.hidden = false;
     resumeButton.focus({preventScroll: true});
-});
+}
+
+minimizeTutorialButton.addEventListener("click", minimizeTutorial);
+
+/*
+  Reaching the goal on a tutorial's last cards offers to run the challenge.
+  Its panel sits under the tutorial's backdrop, where its Stop button and
+  its results cannot be used, so the card makes way. Resume brings it back.
+*/
+document.addEventListener("challenge:start", minimizeTutorial);
 
 resumeButton.addEventListener("click", () => {
     if (!tutorialIsOpen || !tutorialIsMinimized) return;
@@ -936,7 +964,7 @@ document.addEventListener("maze:run-complete", event => {
 });
 
 // A stopped run never completes, so a card waiting for one asks again.
-document.getElementById("stopBtn").addEventListener("click", () => {
+document.addEventListener("maze:run-stopped", () => {
     clearRunningMazeHighlight();
     const step = currentStep();
     if (tutorialIsOpen && step?.requiresRun && nextButton.disabled) {

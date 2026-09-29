@@ -23,9 +23,11 @@
     const convertButton = document.getElementById("convertBtn");
 
     if (typeof Blockly === "undefined" || typeof python === "undefined") {
-        // The stylesheet hides the blocks option, and the area keeps its
-        // fallback message for anyone already in blocks mode.
+        // The stylesheet hides the blocks option. Anyone already in blocks
+        // mode is told why the area is empty.
         document.documentElement.dataset.blocks = "unavailable";
+        blocksArea.querySelector(".blocks-unavailable").textContent =
+            "Code blocks could not be loaded. Switch to Python to carry on.";
         return;
     }
 
@@ -326,4 +328,7 @@
         },
         clearHighlight: () => workspace?.highlightBlock(null),
     };
+
+    // Blockly can arrive after a tutorial has already tried to load blocks.
+    document.dispatchEvent(new CustomEvent("maze:blocks-ready"));
 }());
