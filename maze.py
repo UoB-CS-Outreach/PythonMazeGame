@@ -170,6 +170,13 @@ def run_user_code(src, max_seconds, max_steps):
     try:
         code_obj = compile(src, USER_FILENAME, "exec")
         exec(code_obj, namespace)
+    except SystemExit as exc:
+        # exit() and sys.exit() end the program early, as they would anywhere
+        # else. Left to escape, they were reported as a traceback through
+        # Pyodide's own code, and stopped a challenge run altogether. A
+        # message passed to them is printed, as Python itself would.
+        if exc.code is not None and not isinstance(exc.code, int):
+            sys.stdout.write(f"{exc.code}\n")
     finally:
         # Freeing a tool id does not switch off its events or callbacks.
         monitoring.set_events(tool, 0)

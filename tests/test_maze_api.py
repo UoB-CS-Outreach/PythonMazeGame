@@ -309,6 +309,23 @@ class RunProgramTests(MazeApiTestCase):
 
         self.assertEqual(self.js.actions, ["highlight:a", "move", "highlight:b"])
 
+    def test_exit_ends_the_program_without_an_error(self):
+        for ending in ("exit()", "quit()", "import sys\nsys.exit()"):
+            with self.subTest(ending=ending):
+                self.maze.reset_state()
+                result = self.run_program(f"move()\n{ending}\nmove()\n")
+
+                self.assertEqual(result, {"error": "", "stuck": False})
+                self.assertEqual(self.maze.position(), (1, 2))
+
+    def test_an_exit_message_is_printed(self):
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            result = self.run_program('import sys\nsys.exit("Giving up")\n')
+
+        self.assertEqual(result["error"], "")
+        self.assertEqual(printed.getvalue(), "Giving up\n")
+
     def test_each_run_starts_with_none_of_the_last_runs_variables(self):
         self.run_program("remembered = 1\n")
 
@@ -358,6 +375,12 @@ class ChallengeRunTests(MazeApiTestCase):
         self.assertFalse(result["reached"])
         self.assertEqual(result["reason"], "error")
         self.assertIn("SyntaxError", result["error"])
+
+    def test_exit_ends_one_maze_rather_than_the_whole_challenge(self):
+        result = self.run_challenge("turn_left()\nexit()\n")
+
+        self.assertEqual(result["reason"], "stopped")
+        self.assertEqual(result["error"], "")
 
     def test_nothing_is_animated_during_a_challenge_run(self):
         self.run_challenge(RIGHT_HAND_SOLVER)
