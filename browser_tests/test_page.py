@@ -65,6 +65,16 @@ def test_every_tutorial_track_can_be_finished(page, track):
     assert not page.evaluate("T.$('#challenge-mode').hidden")
 
 
+def test_stop_and_speed_can_be_used_on_the_last_card(page):
+    # The first run card introduces them, and a learner's own program on
+    # the last card is the one most likely to need stopping.
+    pick_tutorial(page, "programming")
+    work_through(page, stop_at="Your turn")
+
+    assert page.evaluate("T.click('#stopBtn')") == "clicked"
+    assert page.evaluate("T.click('#speed')") == "clicked"
+
+
 def test_cancelling_the_tutorial_picker_keeps_a_passed_step(page):
     pick_tutorial(page, "programming")
     work_through(page, stop_at="Now run it")

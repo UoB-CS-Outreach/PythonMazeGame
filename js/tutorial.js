@@ -643,9 +643,16 @@ function showCoachmark() {
       lights the Run button for that reason, whether or not it is the element
       the card is pointing at: without it the button is dimmed and a real
       mouse click lands on the backdrop instead.
+
+      Wherever Run is lit, so is the rest of its row. Stop and Speed are
+      introduced on the first run card, and a learner whose own program on
+      the last card goes the long way round needs them most.
     */
     const extras = [...(step.alsoHighlight || [])];
     if (step.requiresRun) extras.push("#runBtn");
+    if (step.target === "#runBtn" || extras.includes("#runBtn")) {
+        extras.push("#buttons");
+    }
 
     highlightedElements = [highlightedElement];
     extras.forEach(selector => {
