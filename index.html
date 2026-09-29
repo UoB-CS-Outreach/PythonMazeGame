@@ -548,13 +548,20 @@ while not at_goal():
 <section id="tutorialCoachmark" class="tutorial-coachmark" hidden
          tabindex="-1" aria-labelledby="tutorialStepTitle"
          aria-describedby="tutorialStepBody">
-    <p id="tutorialStepCount" class="tutorial-step-count"></p>
-    <h2 id="tutorialStepTitle"></h2>
+    <!-- The top of the card is a handle for dragging it out of the way. -->
+    <div id="tutorialDragHandle" class="tutorial-card-header"
+         title="Drag to move this card">
+        <p id="tutorialStepCount" class="tutorial-step-count"></p>
+        <h2 id="tutorialStepTitle"></h2>
+        <span class="tutorial-drag-grip" aria-hidden="true"></span>
+    </div>
     <div id="tutorialStepBody" class="tutorial-step-body"></div>
+    <div id="tutorialHints" class="tutorial-hints" aria-live="polite"></div>
     <p id="tutorialFeedback" class="tutorial-feedback" aria-live="polite"
        hidden></p>
 
     <div class="tutorial-code-action">
+        <button id="tutorialHintBtn" type="button" hidden>Show a hint</button>
         <button id="tutorialInsertCodeBtn" type="button" hidden>
             Replace editor with example
         </button>

@@ -975,7 +975,55 @@ html[data-mode="blocks"] #output {
 }
 
 .tutorial-code-action {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 12px;
+}
+
+/*
+  The top of the card doubles as a handle for dragging it out of the way. The
+  grip of dots in its corner is the usual sign that something can be moved.
+*/
+.tutorial-card-header {
+    position: relative;
+    padding-right: 26px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.tutorial-dragging .tutorial-card-header {
+    cursor: grabbing;
+}
+
+.tutorial-drag-grip {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 12px;
+    height: 18px;
+    background-image: radial-gradient(circle, #98a4b2 1.4px, transparent 1.6px);
+    background-size: 6px 6px;
+}
+
+.tutorial-hint {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--wash);
+    line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+    .tutorial-card-header {
+        cursor: auto;
+        padding-right: 0;
+    }
+
+    .tutorial-drag-grip {
+        display: none;
+    }
 }
 
 /*
