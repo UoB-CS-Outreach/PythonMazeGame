@@ -13,6 +13,7 @@ import io
 import json
 import re
 import sys
+import threading
 import types
 import unittest
 from pathlib import Path
@@ -240,6 +241,48 @@ class RunProgramTests(MazeApiTestCase):
             "StepLimitError: Stopped after running 2,000 lines", result["error"]
         )
         self.assertNotIn("<locals>", result["error"])
+
+    def run_program_or_fail(self, source, max_steps):
+        """Run a program that might never end, and fail rather than hang."""
+        results = []
+        worker = threading.Thread(
+            target=lambda: results.append(self.run_program(source, max_steps)),
+            daemon=True,
+        )
+        worker.start()
+        worker.join(10)
+        if worker.is_alive():
+            self.fail("The program was never stopped: the page would freeze")
+        return results[0]
+
+    def test_catching_the_stop_cannot_keep_a_loop_running(self):
+        # Wrapping move() in try/except catches the StepLimitError too. The
+        # run must end anyway, whichever line the limit happens to land on.
+        catches_everything = (
+            "while not at_goal():\n"
+            "    try:\n"
+            "        move()\n"
+            "        move()\n"
+            "    except Exception:\n"
+            "        turn_right()\n"
+            "        turn_right()\n"
+        )
+        for max_steps in range(1000, 1010):
+            with self.subTest(max_steps=max_steps):
+                self.maze.reset_state()
+                result = self.run_program_or_fail(catches_everything, max_steps)
+                self.assertTrue(result["stuck"])
+                self.assertIn("StepLimitError", result["error"])
+
+    def test_a_loop_written_on_one_line_is_stopped(self):
+        result = self.run_program_or_fail("while not at_goal(): turn_left()", 2000)
+
+        self.assertTrue(result["stuck"])
+
+    def test_each_lap_of_a_one_line_loop_counts_as_a_line(self):
+        steps = self.maze.run_user_code("for lap in range(100): pass\n", 2.0, 5000)
+
+        self.assertGreaterEqual(steps, 100)
 
     def test_the_learners_variables_cannot_overwrite_the_game(self):
         # direction, maze, row and col are all names of game state in maze.py,

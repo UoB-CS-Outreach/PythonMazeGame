@@ -93,29 +93,56 @@ def run_user_code(src, max_seconds, max_steps):
     lines inside move() and the other API functions, so the figure means what
     the error message says it means. Challenge mode uses that count to set
     each difficulty's budget from what a correct program really costs.
+
+    The lines are counted with sys.monitoring rather than sys.settrace.
+    Python switches a trace function off once it raises, so a program that
+    wrapped move() in try/except caught the StepLimitError and then ran on
+    with no limit at all, which froze the page. A monitoring callback keeps
+    being called, so every line after the limit raises again, including the
+    lines of the learner's except block.
     """
     start = time.time()
     steps = 0
+    monitoring = sys.monitoring
+    line_numbers = {}
 
-    def trace(frame, event, arg):
+    def count_line():
         nonlocal steps
+        steps += 1
+        if steps > max_steps:
+            raise StepLimitError(
+                f"Stopped after running {max_steps:,} lines of your "
+                "program. Check for a loop that never ends."
+            )
+        if (time.time() - start) > max_seconds:
+            raise StepLimitError(
+                f"Stopped after running for {max_seconds:g} seconds. "
+                "Check for a loop that never ends."
+            )
 
-        if frame.f_code.co_filename != USER_FILENAME:
-            return None
+    def on_line(code, line_number):
+        if code.co_filename != USER_FILENAME:
+            return monitoring.DISABLE
+        count_line()
+        return None
 
-        if event == "line":
-            steps += 1
-            if steps > max_steps:
-                raise StepLimitError(
-                    f"Stopped after running {max_steps:,} lines of your "
-                    "program. Check for a loop that never ends."
-                )
-            if (time.time() - start) > max_seconds:
-                raise StepLimitError(
-                    f"Stopped after running for {max_seconds:g} seconds. "
-                    "Check for a loop that never ends."
-                )
-        return trace
+    def on_jump(code, source, destination):
+        # A loop written on one line, such as "while path_ahead(): move()",
+        # goes round without starting a new line, so it needs counting here
+        # or nothing would ever stop it. Counting only jumps back to the same
+        # line matches what sys.settrace counted, which the budgets rely on.
+        if code.co_filename != USER_FILENAME or destination > source:
+            return monitoring.DISABLE
+        if code not in line_numbers:
+            line_numbers[code] = {
+                offset: line
+                for first, end, line in code.co_lines()
+                for offset in range(first, end, 2)
+            }
+        lines = line_numbers[code]
+        if lines.get(source) == lines.get(destination):
+            count_line()
+        return None
 
     # Tracebacks read source lines through linecache, which cannot find a
     # program that only exists in the editor. Registering it is what lets an
@@ -132,12 +159,23 @@ def run_user_code(src, max_seconds, max_steps):
     # it before each block, so the page can light up the block that is running.
     namespace["_highlight_block"] = _highlight_block
 
-    sys.settrace(trace)
+    events = monitoring.events
+    tool = next((tool for tool in range(6) if monitoring.get_tool(tool) is None), None)
+    if tool is None:
+        raise RuntimeError("Every sys.monitoring tool id is already in use")
+    monitoring.use_tool_id(tool, "maze step limit")
+    monitoring.register_callback(tool, events.LINE, on_line)
+    monitoring.register_callback(tool, events.JUMP, on_jump)
+    monitoring.set_events(tool, events.LINE | events.JUMP)
     try:
         code_obj = compile(src, USER_FILENAME, "exec")
         exec(code_obj, namespace)
     finally:
-        sys.settrace(None)
+        # Freeing a tool id does not switch off its events or callbacks.
+        monitoring.set_events(tool, 0)
+        monitoring.register_callback(tool, events.LINE, None)
+        monitoring.register_callback(tool, events.JUMP, None)
+        monitoring.free_tool_id(tool)
 
     return steps
 
