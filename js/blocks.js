@@ -186,6 +186,10 @@
         // Blocks not joined to "when Run is pressed" are greyed out, which
         // shows why they are not doing anything.
         workspace.addChangeListener(Blockly.Events.disableOrphans);
+        // Selecting or scrolling changes nothing about the program.
+        workspace.addChangeListener(event => {
+            if (!event.isUiEvent) updateConvertButton();
+        });
         loadProgram([]);
     }
 
@@ -232,6 +236,9 @@
             {blocks: {languageVersion: 0, blocks: [start]}},
             workspace,
         );
+        // Blockly reports the change on the next animation frame. Loading is
+        // done now, so the button need not wait for it.
+        updateConvertButton();
     }
 
     /*
@@ -275,17 +282,29 @@
     /* Put the blocks' Python into the editor and switch to Python mode. */
     function convertToPython() {
         const game = globalThis.mazeGame;
-        if (!game) return;
-
         const code = toPython();
-        if (code.trim()) {
-            const converted = `# Your blocks, written as Python\n${code}`;
-            if (!game.replaceCode(converted, "Replace your Python code with your blocks?")) {
-                return;
-            }
+        if (!game || !code.trim()) return;
+
+        const converted = `# Your blocks, written as Python\n${code}`;
+        if (!game.replaceCode(converted, "Replace your Python code with your blocks?")) {
+            return;
         }
         game.setMode("python");
         document.getElementById("code").focus();
+    }
+
+    /*
+      With nothing under "when Run is pressed" there is nothing to convert,
+      and switching to an unchanged Python editor would look like the button
+      had done something. So it waits, greyed out, and its tooltip says why.
+      Loose blocks elsewhere on the workspace do not count: they do not run.
+    */
+    function updateConvertButton() {
+        const empty = !toPython().trim();
+        convertButton.disabled = empty;
+        convertButton.title = empty
+            ? "Add blocks under “when Run is pressed” first."
+            : "";
     }
 
     convertButton.addEventListener("click", convertToPython);

@@ -491,18 +491,15 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
 /*
   Blocks need more room than lines of text to be dragged about comfortably.
   This is the starting height; beside the maze it grows to line up with it.
-  Output only ever holds a line or two in this mode, so it gives up room.
+  It is set so that, with Output at its usual height below, the code panel
+  comes out about as tall as the maze panel on a 768 pixel high screen.
 */
 .blocks-editor {
-    height: clamp(340px, 44vh, 600px);
+    height: clamp(300px, 40vh, 560px);
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: #ffffff;
-}
-
-html[data-mode="blocks"] #output {
-    height: 90px;
 }
 
 .blocks-unavailable {
