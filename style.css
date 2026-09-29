@@ -895,11 +895,6 @@ html[data-blocks="unavailable"] [data-tutorial-mode="blocks"] {
     background: rgba(8, 31, 61, 0.62);
 }
 
-.tutorial-backdrop[hidden],
-.tutorial-coachmark[hidden] {
-    display: none;
-}
-
 /*
   The spotlighted element sits above the backdrop, but containers such as
   #buttons and #mazeControls have no background of their own, so without an

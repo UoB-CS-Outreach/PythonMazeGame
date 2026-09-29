@@ -1,7 +1,7 @@
 /*
   Maze legend:
     # = wall
-    space = corridor
+    . or space = open square
     S = start position
     G = goal position
 */
@@ -1264,7 +1264,6 @@ document.addEventListener("tutorial:complete", async () => {
 */
 globalThis.mazeGame = {
     loadPreset: loadPresetMaze,
-    generate: generateNewMaze,
 
     /* Resolves once Pyodide, maze.py and the generator are all loaded. */
     ready: () => pyodideReadyPromise,

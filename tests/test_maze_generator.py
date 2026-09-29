@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # 0 = up, 1 = right, 2 = down, 3 = left, matching maze.py.
 DIRECTIONS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
-# The strategies taught in the Beginner Guide, as (relative direction to try,
+# The strategies taught in the Harder mazes tab, as (relative direction to try,
 # whether to turn that way first) pairs. The final fallback is turning left.
 FORWARD_FIRST_RULE = (0, 1)
 RIGHT_HAND_RULE = (1, 0)

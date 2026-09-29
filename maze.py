@@ -81,7 +81,8 @@ def _sync_maze_from_js():
 _sync_maze_from_js()
 
 
-# JS functions
+# Running a learner's program. JavaScript calls reset_state() and then
+# run_program() for each press of Run.
 
 
 def run_user_code(src, max_seconds, max_steps):
@@ -444,8 +445,8 @@ def _in_bounds(r, c):
     return 0 <= r < num_rows and 0 <= c < num_cols
 
 
-# Maze game functions
-# If changing state must also enqueue an action for JS to animate.
+# The functions a learner's program calls, and their stand-ins. Anything that
+# changes the player's state must also enqueue an action for JS to animate.
 
 
 def move():

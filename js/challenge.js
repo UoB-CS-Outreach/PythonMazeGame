@@ -137,8 +137,8 @@
         row.appendChild(createElement("span", "challenge-tier-name", tier.label));
 
         /*
-          The squares repeat what the row's result text already says. Forty
-          separate announcements would drown the live region, so the squares
+          The squares repeat what the row's result text already says. One
+          announcement per square would drown the live region, so the squares
           are decorative and the text carries the meaning.
         */
         const cells = createElement("span", "challenge-tier-cells");
@@ -321,7 +321,6 @@
         cell.title = title;
         if (cellState === "pass") cell.textContent = "✓";
         if (cellState === "fail") cell.textContent = "✗";
-        if (cellState === "skipped") cell.textContent = "·";
         if (cellState === "pending") cell.textContent = String(seed);
     }
 
@@ -528,7 +527,7 @@
     }
 
     /*
-      Hand control back to the browser between mazes. Without this the forty
+      Hand control back to the browser between mazes. Without this the 150
       Pyodide calls would run back to back in one task and the progress grid
       would only appear once the whole run had finished.
 

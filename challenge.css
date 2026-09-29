@@ -20,10 +20,6 @@
     font-size: 14px;
 }
 
-.challenge-panel [hidden] {
-    display: none;
-}
-
 .challenge-heading {
     margin: 0;
     font-size: 18px;
@@ -76,7 +72,7 @@
     font-weight: 600;
 }
 
-/* Progress: one row per difficulty, ten squares per row */
+/* Progress: one row per difficulty, one square per maze */
 
 .challenge-progress {
     margin-top: 12px;
@@ -174,12 +170,6 @@
     border-color: #a33a32;
     background: #fbeceb;
     color: #8c2b24;
-}
-
-.challenge-cell[data-state="skipped"] {
-    border-style: dashed;
-    background: #f2f4f6;
-    color: #7b848b;
 }
 
 /* Failure card: the most useful thing on the page when it appears */
