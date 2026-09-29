@@ -227,6 +227,63 @@ def test_a_late_blocks_editor_still_gets_the_tutorial_example(open_app):
     assert page.evaluate("mazeBlocks.python()") == "move()\nmove()\n"
 
 
+def test_a_tutorial_chosen_before_the_page_is_ready_opens_in_its_mode(open_app):
+    # The picker opens before maze.js runs. Here maze.js is held back until
+    # after the choice, which used to leave Python showing under the Code
+    # blocks tutorial.
+    held = []
+
+    def hold_maze_js(page):
+        page.route("**/js/maze.js", lambda route: held.append(route))
+
+    page = open_app(before_load=hold_maze_js, wait_for_python=False)
+    pick_tutorial(page, "blocks")
+    held[0].continue_()
+    page.wait_for_function("globalThis.mazeGame", timeout=60000)
+
+    assert page.evaluate("mazeGame.getMode()") == "blocks"
+    assert page.evaluate("T.card().title") == "This is the maze"
+
+
+def test_a_tutorial_example_can_be_undone(page):
+    page.evaluate("T.$('#tutorialSelector').close()")
+    page.click("#code")
+    page.keyboard.press("Control+a")
+    page.keyboard.type("print('mine')")
+    page.evaluate("T.$('#tutorialsBtn').click()")
+    pick_tutorial(page, "programming")
+    page.evaluate("T.$('#tutorialNextBtn').click()")
+    assert page.evaluate("T.$('#code').value") == "move()\nmove()"
+
+    page.click("#code")
+    page.keyboard.press("Control+z")
+
+    assert page.evaluate("T.$('#code').value") == "print('mine')"
+
+
+def test_a_failed_sample_download_keeps_the_code(page):
+    page.route("**/samples/default.txt", lambda route: route.fulfill(status=503))
+    page.evaluate("T.$('#tutorialSelector').close(); T.$('#code').value = 'move()'")
+
+    page.evaluate("T.click('#sampleBtn')")
+
+    page.wait_for_function("T.$('#mazeStatus').textContent !== ''")
+    assert page.evaluate("T.$('#mazeStatus').textContent") == (
+        "Could not load the sample."
+    )
+    assert page.evaluate("T.$('#code').value") == "move()"
+
+
+def test_a_failed_maze_download_puts_the_menu_back(page):
+    page.route("**/mazes/hard_switchbacks.txt", lambda route: route.fulfill(status=503))
+    page.evaluate("T.$('#tutorialSelector').close()")
+
+    page.select_option("#mazeSelect", "hard")
+
+    page.wait_for_function("T.$('#mazeStatus').textContent === 'Could not load hard.'")
+    assert page.evaluate("T.$('#mazeSelect').value") == "tutorial"
+
+
 def test_convert_to_python_asks_first_and_can_be_undone(page):
     answers = []
     page.on("dialog", lambda dialog: answers.pop(0)(dialog))

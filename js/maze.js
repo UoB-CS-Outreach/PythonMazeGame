@@ -870,6 +870,9 @@ async function loadPresetMaze(level) {
         await activateMaze(nextMaze, level);
     } catch (error) {
         if (changeId !== mazeChangeCounter) return;
+        // The menu goes back to the maze still on screen, which is also the
+        // one Generate new maze would make another of.
+        document.getElementById("mazeSelect").value = currentMazeLevel;
         setMazeStatus(`Could not load ${config.label.toLowerCase()}.`, true);
         appendOutput(String(error));
     } finally {
@@ -1225,8 +1228,17 @@ function replaceEditorProgram(text, question) {
 }
 
 document.getElementById("sampleBtn").addEventListener("click", async () => {
-    const response = await fetch("samples/default.txt");
-    const sample = await response.text();
+    // A failed download leaves the learner's code alone. Unchecked, a server
+    // error page became their program.
+    let sample;
+    try {
+        const response = await fetch("samples/default.txt");
+        if (!response.ok) throw new Error(`${response.status}`);
+        sample = await response.text();
+    } catch {
+        setMazeStatus("Could not load the sample.", true);
+        return;
+    }
     replaceEditorProgram(sample, "Replace your code with the sample solver?");
 });
 
@@ -1332,6 +1344,9 @@ globalThis.mazeGame = {
     /* Status line under the maze controls. */
     setStatus: (message, isError = false) => setMazeStatus(message, isError),
 };
+
+// The bridge is up and this file is listening for the other scripts' events.
+document.dispatchEvent(new CustomEvent("maze:loaded"));
 
 // Initial draw when the page loads
 resetVisualState();

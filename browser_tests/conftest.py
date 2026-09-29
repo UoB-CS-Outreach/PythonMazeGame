@@ -110,16 +110,23 @@ def browser_context():
 @pytest.fixture
 def open_app(browser_context, site_url):
     """
-    Open the activity and wait for Python to load.
+    Open the activity and wait for Python and the blocks to load.
 
     ``before_load`` gets the page before it loads, to slow a download down,
-    for example. The tutorial picker is left open, as a visitor finds it.
-    Any uncaught error on the page fails the test.
+    for example, and the waits can be skipped to act while it is loading.
+    The tutorial picker is left open, as a visitor finds it. Any uncaught
+    error on the page fails the test.
     """
     pages = []
     errors = []
 
-    def open_page(width=1366, height=768, before_load=None, wait_for_blocks=True):
+    def open_page(
+        width=1366,
+        height=768,
+        before_load=None,
+        wait_for_python=True,
+        wait_for_blocks=True,
+    ):
         page = browser_context.new_page()
         pages.append(page)
         page.on("pageerror", lambda error: errors.append(str(error)))
@@ -128,8 +135,10 @@ def open_app(browser_context, site_url):
             before_load(page)
         # Not waiting for the load event, which a held-back script delays.
         page.goto(site_url, wait_until="commit")
-        page.wait_for_function(PYTHON_READY, timeout=120000)
-        if wait_for_blocks:
+        page.wait_for_selector("[data-tutorial-mode]")
+        if wait_for_python:
+            page.wait_for_function(PYTHON_READY, timeout=120000)
+        if wait_for_python and wait_for_blocks:
             page.wait_for_function("globalThis.mazeBlocks", timeout=60000)
         page.evaluate(HELPERS)
         return page

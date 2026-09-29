@@ -730,10 +730,16 @@ function renderStep() {
     showCoachmark();
 }
 
-/* Put a step's example program into the blocks or the Python editor. */
+/*
+  Put a step's example program into the blocks or the Python editor. Python
+  goes through maze.js once it is ready, which keeps Ctrl+Z able to bring
+  back whatever the example replaced.
+*/
 function insertExample(step) {
     if (step.blocks) {
         globalThis.mazeBlocks?.load(step.blocks);
+    } else if (step.code && globalThis.mazeGame) {
+        globalThis.mazeGame.setCode(step.code);
     } else if (step.code) {
         const editor = document.getElementById("code");
         editor.value = step.code;
@@ -749,10 +755,21 @@ function startTutorial(mode) {
     tutorialIsOpen = true;
     tutorialIsMinimized = false;
     resumeButton.hidden = true;
-    // maze.js switches to this tutorial's mode, blocks or Python, on hearing it.
-    document.dispatchEvent(new CustomEvent("tutorial:start", {
+
+    /*
+      maze.js switches to this tutorial's mode, blocks or Python, on hearing
+      it. The picker opens before maze.js is running, though, so a choice
+      made that early waits until it is: otherwise the Code blocks tutorial
+      could begin with Python still showing.
+    */
+    const announce = () => document.dispatchEvent(new CustomEvent("tutorial:start", {
         detail: {mode, programMode: tutorialDefinitions[mode].programMode},
     }));
+    if (globalThis.mazeGame) {
+        announce();
+    } else {
+        document.addEventListener("maze:loaded", announce, {once: true});
+    }
     renderStep();
 }
 
@@ -834,15 +851,7 @@ closeSelectorButton.addEventListener("click", closeSelector);
 
 insertCodeButton.addEventListener("click", () => {
     const step = currentStep();
-    if (!step) return;
-
-    // A replacement asked for by the learner goes through maze.js, which
-    // keeps Ctrl+Z able to bring back the code it replaced.
-    if (step.code && globalThis.mazeGame) {
-        globalThis.mazeGame.setCode(step.code);
-    } else {
-        insertExample(step);
-    }
+    if (step) insertExample(step);
 });
 
 /*
