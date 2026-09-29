@@ -59,8 +59,8 @@
                 <button id="runBtn" class="button primary" disabled>
                     Loading Python…
                 </button>
-                <button id="resetBtn" class="button secondary" disabled>
-                    Reset position
+                <button id="stopBtn" class="button secondary" disabled>
+                    Stop
                 </button>
                 <label id="speedLabel">
                     Speed
@@ -152,7 +152,7 @@
                     <button type="button" data-tab="maze" class="active">Maze API
                         &amp; Help
                     </button>
-                    <button type="button" data-tab="guide">Beginner Guide</button>
+                    <button type="button" data-tab="guide">Harder mazes</button>
                 </div>
 
                 <div class="tabs-content" tabindex="0"
@@ -171,8 +171,8 @@
                                 <li><strong>Run program</strong> runs the code in the Python
                                     editor.
                                 </li>
-                                <li><strong>Reset position</strong> stops the current
-                                    animation and returns the triangle to the start.
+                                <li><strong>Stop</strong> halts the triangle where it is.
+                                    Every run starts again from the beginning.
                                 </li>
                                 <li>The <strong>speed</strong> slider changes animation
                                     speed.</li>
@@ -183,6 +183,10 @@
                                     <strong>Generate new maze</strong> builds a fresh
                                     layout of the one you are on, so a program that
                                     only works on a single maze is easy to spot.
+                                </li>
+                                <li><strong>Challenge mode</strong> opens at the bottom of
+                                    the page after your first goal, and tests your program
+                                    on 150 new mazes.
                                 </li>
                             </ul>
                         </div>
@@ -225,6 +229,8 @@
                                     goal square?
                                 </li>
                             </ul>
+                            <img class="help-figure" src="assets/help-directions.svg"
+                                 alt="Facing right, ahead is the square to the right, left is above, right is below and behind is to the left. Facing down, ahead is below, left is to the right, right is to the left and behind is above.">
 
                             <p><strong>Where am I?</strong></p>
                             <p>One function reports something the triangle cannot see:</p>
@@ -265,8 +271,8 @@ else:
         move()
 
 go_forward_until_wall()</code></pre>
-                            <p>For a complete worked progression, open the
-                                <strong>Beginner Guide</strong> tab.</p>
+                            <p>For how each difficulty is solved, open the
+                                <strong>Harder mazes</strong> tab.</p>
                         </div>
 
                         <div class="tab-section">
@@ -301,163 +307,51 @@ go_forward_until_wall()</code></pre>
                         </div>
                     </section>
 
+                    <!--
+                      What comes after the tutorials: why each difficulty needs a
+                      better program. The pictures are drawn from the real mazes
+                      and solvers by tools/make_help_images.py. Challenge mode
+                      links to these sections by id.
+                    -->
                     <section class="tab-pane" data-tab="guide">
                         <div class="tab-section">
-                            <p><strong>Start here: Python in one minute</strong></p>
-                            <p>
-                                A program is a list of precise instructions. Python reads
-                                the list from top to bottom. In this activity, a named
-                                instruction such as <code>move()</code> is a
-                                <strong>function call</strong>; the parentheses tell Python
-                                to run it.
-                            </p>
-                            <p>
-                                Python is case-sensitive, so <code>move()</code> and
-                                <code>Move()</code> are different. Lines beginning with
-                                <code>#</code> are comments for people. Use
-                                <code>print("message")</code> to show text in Output.
-                            </p>
-                            <pre><code># This is a comment
-move()
-print("My program finished")</code></pre>
-                            <p>Select <strong>Run program</strong> to try your code. Every
-                                run resets the triangle first. Errors are useful feedback:
-                                read the final line in Output, correct the code, and run it
-                                again.</p>
+                            <p><strong>Each difficulty adds one idea</strong></p>
+                            <p>A program that solves one difficulty can fail the next,
+                                because each adds something new to the maze. This tab
+                                goes through them in order. After your first goal,
+                                challenge mode tests a program on 25 mazes of each.</p>
                         </div>
 
-                        <div class="tab-section">
-                            <p><strong>Step 1: Your first commands</strong></p>
-                            <p>Start with one command and press <strong>Run
-                                program</strong>:</p>
-                            <pre><code>move()</code></pre>
-                            <p>Next, replace the editor contents with a sequence. Each
-                                command runs once, in order:</p>
-                            <pre><code>turn_right()
-move()
-move()</code></pre>
-                            <p>
-                                Predict the result before running it. Then swap
-                                <code>turn_right()</code> for <code>turn_left()</code> and
-                                compare what happens.
-                            </p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 2: Ask questions</strong></p>
-                            <p>
-                                A path function asks about the maze without moving the
-                                triangle. Its answer is either <code>True</code> or
-                                <code>False</code>, called a Boolean value. Directions are
-                                relative to where the triangle is facing.
-                            </p>
-                            <pre><code>print(path_ahead())
-print(path_left())
-print(path_right())</code></pre>
-                            <p>Run this code, then add a turn before the questions and
-                                compare the answers.</p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 3: Make a decision with if</strong></p>
-                            <p>An <code>if</code> statement runs a block only when its
-                                question is <code>True</code>. <code>else</code> supplies a
-                                fallback:</p>
-                            <pre><code>if path_ahead():
-    move()
-else:
-    turn_right()</code></pre>
-                            <p>
-                                The colon starts a block. The four spaces before each
-                                action are indentation; they show which action belongs to
-                                which choice. Python treats indentation as part of the
-                                program, so keep it consistent.
-                            </p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 4: Repeat actions with while</strong></p>
-                            <p>
-                                A <code>while</code> loop repeats its indented block while
-                                its question remains <code>True</code>. This loop moves
-                                safely until a wall is ahead:
-                            </p>
-                            <pre><code>while path_ahead():
-    move()</code></pre>
-                            <p>
-                                The path changes after every move, so Python checks the
-                                question again. If a loop never changes anything relevant
-                                to its question, it can run forever; this activity stops it
-                                and reports a <code>StepLimitError</code>.
-                            </p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 5: Choose one maze action</strong></p>
-                            <p>
-                                The Easy maze is one winding route: it turns, but it never
-                                branches and has no dead ends. So a program only has to keep
-                                following the corridor. For one round, the rules are:
-                            </p>
-                            <ol>
-                                <li>If the path ahead is open, move.</li>
-                                <li>Otherwise, if the right path is open, turn right and
-                                    move.
-                                </li>
-                                <li>Otherwise, turn left and check again next round.</li>
-                            </ol>
-                            <p>In short: keep going forward, and only turn at a corner.
-                                <code>elif</code> means “otherwise, if”. Python checks the
-                                branches in order and runs only the first matching one.</p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 5a: Test one round</strong></p>
-                            <p>Run these rules once and observe which branch Python
-                                chooses:</p>
-                            <pre><code>if path_ahead():
-    move()
-elif path_right():
-    turn_right()
-    move()
-else:
-    turn_left()</code></pre>
-                            <p>Because each run starts in the same place, you can change
-                                the order of the questions and compare the result.</p>
-                        </div>
-
-                        <div class="tab-section">
-                            <p><strong>Step 6: Repeat until the goal</strong></p>
-                            <p>
-                                <code>at_goal()</code> becomes <code>True</code> on the green
-                                square. <code>not</code> reverses a Boolean value, so
-                                <code>while not at_goal():</code> means “repeat while we have
-                                not reached the goal”. Put the one-round decision inside it:
-                            </p>
-                            <pre><code>while not at_goal():
+                        <div class="tab-section has-image" id="guide-easy">
+                            <div>
+                                <p><strong>Easy: one winding corridor</strong></p>
+                                <p>An Easy maze turns but never branches, so the program
+                                    only has to keep going forward and turn at corners:</p>
+                                <pre><code>while not at_goal():
     if path_ahead():
         move()
     elif path_right():
         turn_right()
         move()
     else:
-        turn_left()
-
-print("Reached the goal!")</code></pre>
-                            <p>This solves any Easy maze, however winding, because there is
-                                only ever one way to continue. Select <strong>Generate new
-                                maze</strong> and run the same program to check that.</p>
+        turn_left()</code></pre>
+                                <p><code>elif</code> means “otherwise, if”. Python checks
+                                    the branches in order and runs only the first one that
+                                    fits.</p>
+                            </div>
+                            <div class="tab-section-aside">
+                                <img src="assets/help-easy.svg"
+                                     alt="An Easy maze: one corridor from the start to the goal, with no branches.">
+                            </div>
                         </div>
 
-                        <div class="tab-section">
-                            <p><strong>Step 7: Medium mazes and one small change</strong></p>
-                            <p>
-                                Medium mazes add junctions and dead ends, so “keep going
-                                forward” now guesses wrongly at a junction and gets stuck in
-                                dead ends. Swap the first two branches so the right path is
-                                preferred:
-                            </p>
-                            <pre><code>while not at_goal():
+                        <div class="tab-section has-image" id="guide-medium">
+                            <div>
+                                <p><strong>Medium: junctions and dead ends</strong></p>
+                                <p>At a junction, “keep going forward” guesses, and it can
+                                    walk into a dead end and stay there. Swap the first two
+                                    branches so the right path comes first:</p>
+                                <pre><code>while not at_goal():
     if path_right():
         turn_right()
         move()
@@ -465,91 +359,99 @@ print("Reached the goal!")</code></pre>
         move()
     else:
         turn_left()</code></pre>
-                            <p>
-                                That is the same three rules in a different order, and it is
-                                now a completely different strategy: the triangle keeps its
-                                right hand on the wall, follows every branch it meets and
-                                walks back out of dead ends by itself. The order of the
-                                branches, not the branches themselves, decides the behaviour.
-                            </p>
-                            <p>
-                                This is guaranteed to reach the goal on Easy and Medium
-                                mazes, because they contain no loops: there is exactly one
-                                route between any two squares, so following one wall
-                                eventually visits the goal.
-                            </p>
+                                <p>The same three rules in a different order make a
+                                    different strategy. The triangle keeps its right hand on
+                                    the wall, tries every branch it meets and walks back out
+                                    of dead ends. On Easy and Medium mazes it always reaches
+                                    the goal, because there is exactly one route between any
+                                    two squares.</p>
+                            </div>
+                            <div class="tab-section-aside">
+                                <img src="assets/help-medium.svg"
+                                     alt="A Medium maze: branching corridors and dead ends, but no loops.">
+                            </div>
                         </div>
 
-                        <div class="tab-section">
-                            <p><strong>Step 8: Where wall following breaks</strong></p>
-                            <p>
-                                Hard and Expert mazes contain loops, and their walls are no
-                                longer one connected shape. If the triangle starts following
-                                a wall island that does not touch the goal, it can circle it
-                                forever: the squares it sees look identical on each lap, so
-                                no rule that only asks about neighbouring squares can tell
-                                that it has been there before.
-                            </p>
-                            <p>
-                                The activity stops such a program with a
-                                <code>StepLimitError</code>, but that is only a safety
-                                net, not how a good solver knows it is lost. To get past
-                                this you need <em>memory</em>: some record of where the
-                                triangle has already been, so it can rule those routes out
-                                and back up to the last untried junction. Try the wall
-                                follower on Hard first; it often still works, which is
-                                exactly why “it worked once” is not the same as “it is
-                                correct”.
-                            </p>
+                        <div class="tab-section has-image" id="guide-loops">
+                            <div>
+                                <p><strong>Hard and Expert: loops</strong></p>
+                                <p>Hard and Expert mazes contain loops, so some walls are
+                                    islands that never touch the goal. A wall follower that
+                                    starts beside one goes round it forever. Every lap looks
+                                    the same, so a rule that only checks the squares next to
+                                    the triangle cannot tell it has been there before.</p>
+                                <p>The picture is Hard maze 15 from challenge mode. The
+                                    right-hand rule follows the red route, passes one wall
+                                    away from the goal, and arrives back where it
+                                    started.</p>
+                            </div>
+                            <div class="tab-section-aside">
+                                <img src="assets/help-loop.svg"
+                                     alt="Hard maze 15 with the wall follower&#39;s route in red. The route loops back to the start and never reaches the goal in the top right corner.">
+                            </div>
+                        </div>
+
+                        <div class="tab-section has-image" id="guide-plaza">
+                            <div>
+                                <p><strong>Plaza: no wall to follow</strong></p>
+                                <p>A Plaza is an open hall of separate pillars, with the
+                                    start and goal away from the outside wall. Keeping a hand
+                                    on a pillar only leads round that pillar, so no wall
+                                    follower solves a single one.</p>
+                            </div>
+                            <div class="tab-section-aside">
+                                <img src="assets/help-plaza.svg"
+                                     alt="A Plaza maze: open floor dotted with small separate pillars.">
+                            </div>
+                        </div>
+
+                        <div class="tab-section has-image" id="guide-memory">
+                            <div>
+                                <p><strong>Give the triangle a memory</strong></p>
+                                <p>What a wall follower lacks is memory.
+                                    <code>position()</code> gives the square the triangle is
+                                    on, so a program can keep every square it has visited in
+                                    a <code>set</code> and tell new ground from ground it has
+                                    covered:</p>
+                                <pre><code>visited = set()
+
+while not at_goal():
+    visited.add(position())
+    ...</code></pre>
+                                <p>Then prefer a direction whose square is not in
+                                    <code>visited</code>, and keep a list of the moves made so
+                                    they can be retraced out of a dead end.
+                                    <code>position()</code> does not say which way the
+                                    triangle faces, so keep that in a variable as well and
+                                    change it at every turn.</p>
+                                <p>The picture shows a program like this on the same maze.
+                                    It explored the shaded squares, backed out of the dead
+                                    ends and found the goal. This approach solves every
+                                    difficulty, Plaza and Marathon included.</p>
+                            </div>
+                            <div class="tab-section-aside">
+                                <img src="assets/help-memory.svg"
+                                     alt="Hard maze 15 again. The squares a memory solver visited are shaded, and its route in blue reaches the goal.">
+                            </div>
                         </div>
 
                         <div class="tab-section">
                             <p><strong>Further challenges</strong></p>
-                            <p>Change one thing at a time, predict the result, then test it:</p>
                             <ul>
-                                <li><strong>Prefer left instead of right:</strong> swap the
-                                    <code>path_left()</code> and <code>path_right()</code>
-                                    blocks.
+                                <li><strong>Prefer left:</strong> swap the
+                                    <code>path_right()</code> branch for a
+                                    <code>path_left()</code> one, and compare.
                                 </li>
-                                <li><strong>Measure your solver:</strong> create a variable
-                                    such as <code>moves = 0</code>, increase it after every
-                                    <code>move()</code>, and print the final value. Compare
-                                    the count on Easy against Hard.
+                                <li><strong>Walk less:</strong> challenge mode compares each
+                                    solved maze with its shortest route, shown as par.
+                                    <code>1.0×</code> par means no wasted moves.
                                 </li>
-                                <li><strong>Name repeated behaviour:</strong> create a
-                                    function such as <code>def turn_around():</code> and
-                                    call it where needed.</li>
-                                <li><strong>Test assumptions:</strong> generate several Hard
-                                    and Expert mazes and run the same solver on each. When
-                                    it fails, use <code>print()</code> to work out what it
-                                    keeps repeating.</li>
+                                <li><strong>Name repeated behaviour:</strong> define a
+                                    function such as <code>def turn_around():</code> and call
+                                    it where needed.
+                                </li>
                             </ul>
                         </div>
-
-                        <div class="tab-section">
-                            <p><strong>Going further: give the triangle a memory</strong></p>
-                            <p>
-                                <code>position()</code> tells you which square you are on.
-                                Keep every square you have visited in a
-                                <code>set</code>, and your program can tell the difference
-                                between new ground and a route it has already walked.
-                            </p>
-                            <pre><code>visited = set()
-
-while not at_goal():
-    visited.add(position())
-    print(len(visited), "squares seen")
-    ...</code></pre>
-                            <p>
-                                That is the missing ingredient. Prefer a direction whose
-                                square is not in <code>visited</code>, remember the way
-                                you came so you can back out of a dead end, and you have a
-                                solver that copes with loops, pillars and open ground.
-                                It is more work than wall following, and it is the only
-                                approach here that survives every difficulty.
-                            </p>
-                        </div>
-
                     </section>
                 </div>
             </div>
@@ -563,18 +465,21 @@ while not at_goal():
     <button id="resumeTutorialBtn" type="button" hidden>Resume tutorial</button>
 </main>
 
+<!--
+  Each option shows what working that way looks like. The blocks picture and
+  the first code picture are the same program, so the choice reads as two
+  ways of writing one thing rather than an easy option and a hard one.
+  preview-blocks.svg was exported from the real blocks, so it matches them.
+-->
 <dialog id="tutorialSelector" class="tutorial-selector"
-        aria-labelledby="tutorialSelectorTitle"
-        aria-describedby="tutorialSelectorDescription">
+        aria-label="Choose a tutorial">
     <div class="tutorial-selector-panel">
-        <h2 id="tutorialSelectorTitle">Choose how to start</h2>
-        <p id="tutorialSelectorDescription">
-            You can switch between code blocks and Python at any time.
-        </p>
-
         <div class="tutorial-options">
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="blocks">
+                <span class="tutorial-option-preview" aria-hidden="true">
+                    <img src="assets/preview-blocks.svg" alt="">
+                </span>
                 <span class="tutorial-option-title">Code blocks</span>
                 <span class="tutorial-option-description">
                     Snap blocks together. No typing and no experience needed.
@@ -583,6 +488,13 @@ while not at_goal():
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="programming">
+                <span class="tutorial-option-preview tutorial-option-code"
+                      aria-hidden="true">
+                    <span class="code-comment"># Turn right, then move twice</span>
+                    <span>turn_right()</span>
+                    <span>move()</span>
+                    <span>move()</span>
+                </span>
                 <span class="tutorial-option-title">Python, step by step</span>
                 <span class="tutorial-option-description">
                     Type real Python code, with each idea explained as you go.
@@ -591,6 +503,14 @@ while not at_goal():
 
             <button type="button" class="tutorial-option"
                     data-tutorial-mode="python">
+                <span class="tutorial-option-preview tutorial-option-code"
+                      aria-hidden="true">
+                    <span>while not at_goal():</span>
+                    <span>    if path_ahead():</span>
+                    <span>        move()</span>
+                    <span>    else:</span>
+                    <span>        turn_left()</span>
+                </span>
                 <span class="tutorial-option-title">Python for coders</span>
                 <span class="tutorial-option-description">
                     You have programmed before. A short tour of the commands and
@@ -614,6 +534,9 @@ while not at_goal():
         <button id="goalDialogLater" class="button secondary" type="button">
             Not now
         </button>
+        <!-- A second suggestion, only offered in code blocks mode. -->
+        <button id="goalDialogExtra" class="button secondary" type="button"
+                hidden></button>
         <button id="goalDialogAction" class="button primary" type="button">
         </button>
     </div>

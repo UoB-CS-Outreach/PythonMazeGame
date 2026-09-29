@@ -52,6 +52,40 @@
         {key: "plaza", label: "Plaza", maxSteps: 120000},
         {key: "marathon", label: "Marathon", maxSteps: 180000},
     ];
+
+    /*
+      What each difficulty adds that the one before did not, in the terms the
+      Harder mazes tab uses. When a run finishes, the first difficulty with an
+      unsolved maze is the one to explain: a score of 96 out of 150 says
+      nothing on its own, but "loops defeat a program that only follows a
+      wall" is the lesson. The structures are defined in maze_generator.py.
+    */
+    const TIER_IDEAS = {
+        easy: "Easy mazes are one winding corridor, so the program only has " +
+            "to follow it round each corner.",
+        medium: "Medium mazes add junctions and dead ends, so the program has " +
+            "to choose a way and find its way back out of dead ends.",
+        hard: "Hard mazes add loops, and a program that only follows a wall " +
+            "can go round one forever. Solving them needs a program that " +
+            "remembers where it has been.",
+        expert: "Expert mazes add more loops and open rooms, where a program " +
+            "that only follows a wall can go round forever. Solving them " +
+            "needs a program that remembers where it has been.",
+        plaza: "Plaza is an open hall of pillars with no wall worth " +
+            "following, so the program has to explore the space itself.",
+        marathon: "Marathon mazes are the biggest, and a program that wanders " +
+            "too far runs out of steps before it arrives.",
+    };
+
+    /* The section of the Harder mazes tab that explains how to get past each. */
+    const TIER_HELP = {
+        easy: "guide-easy",
+        medium: "guide-medium",
+        hard: "guide-loops",
+        expert: "guide-loops",
+        plaza: "guide-plaza",
+        marathon: "guide-memory",
+    };
     /*
       Twenty-five mazes per difficulty, always seeds 1 to 25, so everyone in
       the room runs exactly the same set and a demonstrator can reproduce a
@@ -169,6 +203,22 @@
         elements.status = createElement("p", "challenge-status", "Starting up…");
         progress.appendChild(elements.status);
 
+        /*
+          From the explanation to the part of the Harder mazes tab that shows
+          what to do about it. That tab is about Python, and code blocks mode
+          hides it, so the link goes too (.for-python).
+        */
+        elements.helpLink = createElement(
+            "button", "challenge-help-link for-python", "How to solve these",
+        );
+        elements.helpLink.type = "button";
+        elements.helpLink.hidden = true;
+        elements.helpLink.addEventListener("click", () => {
+            const tier = firstUnsolvedTier();
+            if (tier) globalThis.mazeGame?.showHelp(TIER_HELP[tier.key]);
+        });
+        progress.appendChild(elements.helpLink);
+
         elements.tiers = new Map();
         const list = createElement("ol", "challenge-tier-list");
         TIERS.forEach(tier => list.appendChild(buildTierRow(tier)));
@@ -232,14 +282,26 @@
         if (state.unlocked || !game) return;
         unlock();
 
-        const accepted = await game.showGoalDialog({
+        /*
+          Someone who has only used code blocks has just written a real
+          program without typing any of it. Seeing it as Python is the
+          moment that shows them, so code blocks mode offers that as well.
+        */
+        const blocksMode = game.getMode() === "blocks";
+        const choice = await game.showGoalDialog({
             title: "You reached the goal",
             text: "Challenge mode is now open at the bottom of the page. It " +
                 `runs your program on ${TOTAL_MAZES} new mazes, from Easy to ` +
-                "Marathon, and counts how many it solves.",
+                "Marathon, and counts how many it solves." +
+                (blocksMode ? " Your blocks are also a real Python program." : ""),
             action: "Run the challenge",
+            extra: blocksMode ? "See it as Python" : "",
         });
-        if (!accepted) return;
+        if (choice === "extra") {
+            globalThis.mazeBlocks?.convertToPython();
+            return;
+        }
+        if (choice !== "action") return;
 
         const panel = document.getElementById("challenge-mode");
         panel.scrollIntoView({behavior: scrollBehavior(), block: "start"});
@@ -301,6 +363,35 @@
         elements.tiers.get(tier.key).result.textContent = describeTier(tier, results);
     }
 
+    /* "Easy", "Easy and Medium", "Easy, Medium and Hard". */
+    function listLabels(labels) {
+        if (labels.length < 2) return labels.join("");
+        return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+    }
+
+    /*
+      Turn a finished run into one or two sentences about what the program
+      can and cannot do: which difficulties it solved completely, and what
+      the first one it could not solve adds.
+    */
+    function firstUnsolvedTier() {
+        return TIERS.find(tier =>
+            (state.results.get(tier.key) || []).some(result => !result.reached),
+        );
+    }
+
+    function explainResult() {
+        const firstUnsolved = firstUnsolvedTier();
+        if (!firstUnsolved) return "";
+
+        const solved = TIERS.slice(0, TIERS.indexOf(firstUnsolved))
+            .map(tier => tier.label);
+        const opening = solved.length > 0
+            ? `Every ${listLabels(solved)} maze was solved.`
+            : "Not every Easy maze was solved.";
+        return `${opening} ${TIER_IDEAS[firstUnsolved.key]}`;
+    }
+
     /*
       One headline figure. The per-difficulty breakdown is on the rows just
       below, so repeating it here only made a long unreadable line.
@@ -321,6 +412,7 @@
         state.results = new Map();
         elements.failure.hidden = true;
         elements.summary.hidden = true;
+        elements.helpLink.hidden = true;
 
         TIERS.forEach(tier => {
             SEEDS.forEach(seed => {
@@ -534,7 +626,8 @@
             } else if (cannotStart) {
                 setStatus("Your program has an error, so no maze could be run.");
             } else if (failed) {
-                setStatus("Finished. Load the first unsolved maze to watch it.");
+                setStatus(explainResult());
+                elements.helpLink.hidden = false;
             } else {
                 setStatus(
                     `All ${TOTAL_MAZES} mazes solved. Your program is not ` +

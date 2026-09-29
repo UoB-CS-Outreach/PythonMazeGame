@@ -272,7 +272,8 @@
     });
     if (document.documentElement.dataset.mode === "blocks") showBlocks();
 
-    convertButton.addEventListener("click", () => {
+    /* Put the blocks' Python into the editor and switch to Python mode. */
+    function convertToPython() {
         const game = globalThis.mazeGame;
         if (!game) return;
 
@@ -285,9 +286,12 @@
         }
         game.setMode("python");
         document.getElementById("code").focus();
-    });
+    }
+
+    convertButton.addEventListener("click", convertToPython);
 
     globalThis.mazeBlocks = {
+        convertToPython,
         /* Replace the program with an example, e.g. ["move", "move"]. */
         load: steps => {
             if (!workspace) createWorkspace();

@@ -176,8 +176,27 @@ const ctx = canvas.getContext("2d");
   A cap stops the small tutorial maze from becoming comically large.
 */
 const MAX_CELL_SIZE = 44;
-/* Roughly the height of the panel's heading, controls and status line. */
-const MAZE_PANEL_CHROME_HEIGHT = 300;
+/* Space left between the bottom of the maze panel and the bottom of the window. */
+const MAZE_PANEL_BOTTOM_GAP = 16;
+
+/*
+  Height of everything that must fit in the window alongside the maze drawing:
+  the site header, the panel's heading, and the controls beneath the maze.
+  Measured rather than assumed. A fixed guess of 300 pixels left out the site
+  header, so on a 768 pixel high screen the maze was drawn too big and pushed
+  the maze menu below the bottom of the window. The stage is left out of the
+  sum because it stretches to line the panel up with the editor beside it.
+*/
+function mazeChromeHeight() {
+    const stage = canvas.parentElement;
+    const panel = stage.closest(".maze-panel");
+    const styles = getComputedStyle(stage);
+    const stagePadding =
+        parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const panelTop = panel.getBoundingClientRect().top + window.scrollY;
+    return panelTop + (panel.offsetHeight - stage.offsetHeight) + stagePadding +
+        MAZE_PANEL_BOTTOM_GAP;
+}
 
 let cellSize;
 let offsetX = 0;
@@ -199,7 +218,7 @@ function updateMazeGeometry() {
     // wide screen the maze and the editor can be read side by side.
     const maxHeight = Math.max(
         260,
-        Math.min(window.innerHeight - MAZE_PANEL_CHROME_HEIGHT, 780),
+        Math.min(window.innerHeight - mazeChromeHeight(), 780),
     );
     cellSize = Math.min(
         availableMazeWidth() / numCols,
@@ -675,6 +694,8 @@ async function playActions(runId, stuckReplay = null) {
 let pyodide;
 let pythonReady = false;
 let runCounter = 0;
+/* The run whose animation is on screen, for Stop; null when nothing moves. */
+let playingRun = null;
 let tutorialAnimationActive = false;
 
 /*
@@ -790,7 +811,7 @@ function setMazeChangeInProgress(inProgress) {
     const controlsEnabled = pythonReady && !inProgress;
     setMazeControlsEnabled(controlsEnabled);
     document.getElementById("runBtn").disabled = !controlsEnabled;
-    document.getElementById("resetBtn").disabled = !controlsEnabled;
+    document.getElementById("stopBtn").disabled = !controlsEnabled;
 }
 
 async function activateMaze(nextMaze, level) {
@@ -960,10 +981,12 @@ async function runProgram() {
     const movementTypes = actionTypes.filter(type => MOVEMENT.has(type));
 
     // Animate the recorded actions
+    playingRun = thisRun;
     const playedTo = await playActions(
         thisRun,
         result.stuck ? planStuckReplay(actionTypes) : null,
     );
+    if (playingRun === thisRun) playingRun = null;
 
     // A newer run or reset has replaced this one.
     if (thisRun !== runCounter) return;
@@ -1029,33 +1052,39 @@ async function runProgram() {
 }
 
 /*
-  The small window offered after reaching the goal, with one suggested next
-  step. Resolves true if the learner takes it.
+  The small window offered after reaching the goal, with a suggested next
+  step and optionally a second one. Resolves "action" or "extra" for the
+  one the learner takes, or null for Not now.
 */
-function showGoalDialog({title, text, action}) {
+function showGoalDialog({title, text, action, extra = ""}) {
     const dialog = document.getElementById("goalDialog");
-    if (dialog.open) return Promise.resolve(false);
+    if (dialog.open) return Promise.resolve(null);
 
     document.getElementById("goalDialogTitle").textContent = title;
     document.getElementById("goalDialogText").textContent = text;
     const actionButton = document.getElementById("goalDialogAction");
+    const extraButton = document.getElementById("goalDialogExtra");
     const laterButton = document.getElementById("goalDialogLater");
     actionButton.textContent = action;
+    extraButton.textContent = extra;
+    extraButton.hidden = !extra;
 
     return new Promise(resolve => {
-        function finish(accepted) {
+        function finish(choice) {
             actionButton.onclick = null;
+            extraButton.onclick = null;
             laterButton.onclick = null;
             dialog.oncancel = null;
             dialog.close();
-            resolve(accepted);
+            resolve(choice);
         }
 
-        actionButton.onclick = () => finish(true);
-        laterButton.onclick = () => finish(false);
+        actionButton.onclick = () => finish("action");
+        extraButton.onclick = () => finish("extra");
+        laterButton.onclick = () => finish(null);
         dialog.oncancel = event => {
             event.preventDefault();
-            finish(false);
+            finish(null);
         };
         dialog.showModal();
         actionButton.focus();
@@ -1097,13 +1126,16 @@ document.getElementById("runBtn").addEventListener("click", () => {
     runProgram();
 });
 
-// Reset button clears output and resets both JS and Python state
-document.getElementById("resetBtn").addEventListener("click", () => {
+/*
+  Stop halts the animation where it is, so the learner can see where the
+  triangle had got to, and in code blocks mode which block was running.
+  There is nothing to reset: every run starts again from the beginning.
+*/
+document.getElementById("stopBtn").addEventListener("click", () => {
+    if (playingRun === null) return;
+    playingRun = null;
     runCounter++;
-    clearOutput();
-    resetVisualState();
-    globalThis.mazeBlocks?.clearHighlight();
-    pyodideReadyPromise.then(() => pyodide.runPythonAsync("reset_state()"));
+    appendOutput("Stopped.");
 });
 
 /*
@@ -1243,8 +1275,25 @@ globalThis.mazeGame = {
     getMode: () => programMode,
     setMode: setProgramMode,
 
-    /* Offer one next step after the goal; resolves true if it is taken. */
+    /* Offer a next step after the goal; resolves with the one taken. */
     showGoalDialog,
+
+    /* Open the Harder mazes tab at one of its sections, by id. */
+    showHelp: sectionId => {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        document.querySelector('#help-tabs [data-tab="guide"]').click();
+
+        // Scroll the tab's own box to the section, then the page to the tab.
+        const content = document.querySelector("#help-tabs .tabs-content");
+        content.scrollTop += section.getBoundingClientRect().top -
+            content.getBoundingClientRect().top;
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        document.getElementById("help-tabs").scrollIntoView({
+            behavior: reduced ? "auto" : "smooth",
+            block: "start",
+        });
+    },
 
     /* Status line under the maze controls. */
     setStatus: (message, isError = false) => setMazeStatus(message, isError),

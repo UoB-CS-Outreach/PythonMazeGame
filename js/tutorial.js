@@ -248,11 +248,11 @@ const tutorialDefinitions = {
             },
             {
                 target: "#buttons",
-                title: "Run, reset, speed",
+                title: "Run, stop, speed",
                 body: `
                     <p><strong>Run program</strong> always starts again from the
                     beginning, so you cannot break anything.</p>
-                    <p><strong>Reset position</strong> stops an animation.
+                    <p><strong>Stop</strong> halts the triangle where it is.
                     <strong>Speed</strong> changes only how fast it is drawn.</p>
                 `,
             },
@@ -386,9 +386,9 @@ const tutorialDefinitions = {
                     <code>while not at_goal():</code> keeps going until you arrive.
                     Put the rule inside it: select the rule and press Tab to
                     indent it.</p>
-                    <p>Have a go. If you get stuck, the <strong>Beginner Guide</strong>
-                    tab builds it up line by line, and <strong>Load sample</strong>
-                    shows one finished answer.</p>
+                    <p>Have a go. If you get stuck, the <strong>Harder mazes</strong>
+                    tab below the maze shows the whole loop, and <strong>Load
+                    sample</strong> loads a finished answer.</p>
                 `,
                 final: true,
             },
@@ -490,8 +490,8 @@ const tutorialDefinitions = {
                     loops. Everything after them does.</p>
                     <p>Use the <strong>Maze</strong> menu or <strong>Generate new
                     maze</strong> to find a layout that defeats it, then work out what
-                    a solver would have to remember. The <strong>Beginner Guide</strong>
-                    tab covers exactly where it breaks.</p>
+                    a solver would have to remember. The <strong>Harder mazes</strong>
+                    tab shows exactly where it breaks.</p>
                 `,
                 final: true,
             },
@@ -964,9 +964,13 @@ document.addEventListener("maze:run-complete", event => {
     positionCoachmark();
 });
 
-document.getElementById("resetBtn").addEventListener(
-    "click",
-    clearRunningMazeHighlight,
-);
+// A stopped run never completes, so a card waiting for one asks again.
+document.getElementById("stopBtn").addEventListener("click", () => {
+    clearRunningMazeHighlight();
+    const step = currentStep();
+    if (tutorialIsOpen && step?.requiresRun && nextButton.disabled) {
+        setFeedback("Run the program to complete this step.");
+    }
+});
 
 openSelector();
